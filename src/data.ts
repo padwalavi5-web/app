@@ -1,43 +1,33 @@
 import { db } from './firebase';
-import { collection, addDoc, getDocs, doc, updateDoc, increment, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { Youth, Report, Branch, HourlyRate } from './types';
 
-// --- ניהול נוער ---
+// --- נוער ---
 export const getYouth = async (): Promise<Youth[]> => {
   const querySnapshot = await getDocs(collection(db, 'youth'));
-  return querySnapshot.docs.map(doc => ({ 
-    id: doc.id, 
-    ...doc.data() 
-  } as Youth));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Youth));
 };
 
 export const addYouth = async (youth: any) => {
-  // יוצרים ID מבוסס שם ומספר תקציב כדי למנוע כפילויות
   const id = `${youth.name}_${youth.personalBudgetNumber}`;
-  await setDoc(doc(db, 'youth', id), {
-    ...youth,
-    id: id,
-    totalHours: 0,
-    lastResetHours: 0 // שומר את כמות השעות שהייתה בזמן האיפוס האחרון
-  });
+  await setDoc(doc(db, 'youth', id), { ...youth, id, totalHours: 0, lastResetHours: 0 });
 };
 
-// --- ניהול דיווחים ---
+// --- דיווחים ---
 export const addReport = async (report: any) => {
-  const docRef = await addDoc(collection(db, 'reports'), report);
-  return docRef.id;
+  await addDoc(collection(db, 'reports'), report);
 };
 
 export const getReports = async (): Promise<Report[]> => {
   const querySnapshot = await getDocs(collection(db, 'reports'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report));
 };
 
-export const updateReport = async (reportId: string, updates: any) => {
+export const updateReport = async (reportId: string, updates: Partial<Report>) => {
   await updateDoc(doc(db, 'reports', reportId), updates);
 };
 
-// --- ניהול ענפים (תיקון השמירה והשליפה) ---
+// --- ענפים ---
 export const getBranches = async (): Promise<Branch[]> => {
   const querySnapshot = await getDocs(collection(db, 'branches'));
   return querySnapshot.docs.map(doc => doc.data() as Branch);
@@ -52,53 +42,38 @@ export const deleteBranch = async (branchName: string) => {
 };
 
 export const getManagers = async () => {
-  const querySnapshot = await getDocs(collection(db, 'branches'));
-  return querySnapshot.docs.map(doc => {
-    const data = doc.data();
-    return { 
-      name: data.name, 
-      password: data.password, 
-      role: 'manager' as any, 
-      branch: data.name 
-    };
-  });
+  const branches = await getBranches();
+  return branches.map(b => ({ name: b.name, password: b.password, role: 'manager' as const, branch: b.name }));
 };
 
-// --- תעריפים ואיפוסים ---
+// --- תעריפים ---
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HourlyRate));
 };
 
-export const resetPaidHoursOnly = async (youthId: string, currentTotal: number) => {
-  if (!youthId) return;
-  // מעדכנים את ה-Baseline לטוטאל הנוכחי. 
-  // כך בפעם הבאה: (CurrentTotal - LastReset) יתחיל מ-0.
-  await updateDoc(doc(db, 'youth', youthId), { 
-    lastResetHours: currentTotal 
-  });
+export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
+  await addDoc(collection(db, 'rates'), rate);
 };
 
-export const resetEverythingForJuly = async (youthId: string) => {
-  if (!youthId) return;
-  await updateDoc(doc(db, 'youth', youthId), { 
-    totalHours: 0,
-    lastResetHours: 0 
-  });
+// --- איפוסים (לפי הלוגיקה שלך) ---
+export const resetPaidHours = async (youthId: string, currentTotal: number) => {
+  await updateDoc(doc(db, 'youth', youthId), { lastResetHours: currentTotal });
 };
 
+export const resetUnder90Hours = async (youthId: string) => {
+  await updateDoc(doc(db, 'youth', youthId), { totalHours: 0, lastResetHours: 0 });
+};
+
+// --- עזר ---
 export const calculateAge = (birthDate: string): number => {
-  const today = new Date();
   const birth = new Date(birthDate);
+  const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
   return age;
 };
 
 export const setCurrentUser = (user: any) => localStorage.setItem('currentUser', JSON.stringify(user));
-export const getCurrentUser = () => {
-  const user = localStorage.getItem('currentUser');
-  return user ? JSON.parse(user) : null;
-};
+export const getCurrentUser = () => JSON.parse(localStorage.getItem('currentUser') || 'null');
 export const logout = () => localStorage.removeItem('currentUser');

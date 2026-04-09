@@ -1,4 +1,4 @@
-export type Role = 'guide' | 'manager' | 'youth';
+export type Role = 'youth' | 'manager' | 'guide';
 
 export interface Youth {
   id: string;
@@ -6,25 +6,22 @@ export interface Youth {
   birthDate: string;
   personalBudgetNumber: string;
   totalHours: number;
-  paidHours: number;
-  budget: number;
-  password?: string;
-  branch?: string;
-  role?: Role;
+  lastResetHours?: number; // השעות שהיו במערכת בזמן האיפוס האחרון
+  // שדות וירטואליים לחישוב בזמן אמת
+  paidHours?: number; 
+  budget?: number;
 }
 
 export interface Report {
-  id: string;
+  id?: string;
   youthId: string;
   youthName: string;
   branch: string;
   date: string;
-  hours: number;
-  startTime: string; 
-  endTime: string;   
-  totalHours: number; 
+  startTime: string;
+  endTime: string;
+  totalHours: number;
   status: 'pending' | 'approved' | 'rejected';
-  note?: string;     
 }
 
 export interface Branch {
@@ -36,5 +33,4 @@ export interface HourlyRate {
   id: string;
   age: number;
   rate: number;
-  amount?: number; 
 }

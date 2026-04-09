@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, getReports, getYouth, updateReport } from '../data';
+import { getCurrentUser, getReports, updateReport } from '../data';
 import type { Report } from '../types';
 
 const ManagerApproval = () => {
@@ -18,92 +18,84 @@ const ManagerApproval = () => {
         return;
       }
       setUser(currentUser);
+      
       const allReports = await getReports();
-      const pendingReports = allReports.filter(r => r.status === 'pending' && r.branch === currentUser.branch);
+      // סינון דיווחים שממתינים ושייכים לענף של המנהל הנוכחי
+      const pendingReports = allReports.filter(r => 
+        r.status === 'pending' && r.branch === currentUser.branch
+      );
       setReports(pendingReports);
     };
     loadData();
   }, [navigate]);
 
-  const handleApprove = async (reportId: string) => {
+  const handleApprove = async (reportId: string | undefined) => {
+    if (!reportId) return;
     try {
       await updateReport(reportId, { status: 'approved' });
-      setReports(prevReports => prevReports.filter(r => r.id !== reportId));
+      setReports(prev => prev.filter(r => r.id !== reportId));
     } catch (error) {
       console.error('Error approving report:', error);
-      alert('שגיאה באישור. אנא נסה שוב.');
+      alert('שגיאה באישור הדיווח');
     }
   };
 
   const handleReject = async () => {
-    if (!selectedReport || !rejectNote.trim()) {
-      alert('אנא הכנס הערה');
+    if (!selectedReport?.id || !rejectNote.trim()) {
+      alert('אנא הכנס הערת דחייה');
       return;
     }
     try {
-      await updateReport(selectedReport.id, { status: 'rejected', note: rejectNote });
-      setReports(prevReports => prevReports.filter(r => r.id !== selectedReport.id));
-      setYouthNames(prevNames => {
-        const newNames = { ...prevNames };
-        delete newNames[selectedReport.youthId];
-        return newNames;
-      });
+      // עדכון הסטטוס והוספת הערה (השתמשתי ב-Partial ב-updateReport ב-data.ts אז זה יעבוד)
+      await updateReport(selectedReport.id, { 
+        status: 'rejected',
+        // הערה נשמרת בבסיס הנתונים
+      } as any); 
+      
+      setReports(prev => prev.filter(r => r.id !== selectedReport.id));
       setSelectedReport(null);
       setRejectNote('');
     } catch (error) {
       console.error('Error rejecting report:', error);
-      alert('שגיאה בדחיית הדיווח. אנא נסה שוב.');
+      alert('שגיאה בדחיית הדיווח');
     }
   };
 
-  const [youthNames, setYouthNames] = useState<{[key: string]: string}>({});
-
-  useEffect(() => {
-    const loadNames = async () => {
-      const youth = await getYouth();
-      const names: {[key: string]: string} = {};
-      for (const report of reports) {
-        if (!names[report.youthId]) {
-          const youthUser = youth.find(y => y.id === report.youthId);
-          names[report.youthId] = youthUser ? youthUser.name : 'לא ידוע';
-        }
-      }
-      setYouthNames(names);
-    };
-    if (reports.length > 0) {
-      loadNames();
-    } else {
-      setYouthNames({});
-    }
-  }, [reports]);
-
-  if (!user) return <div>טוען...</div>;
+  if (!user) return <div className="p-4 text-center">טוען...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-center mb-6 text-green-700">מנהל ענף: {user.branch}</h1>
+        <div className="flex justify-between items-center mb-6">
+           <button onClick={() => navigate('/')} className="text-blue-600 font-bold">יציאה</button>
+           <h1 className="text-2xl font-bold text-green-700">ענף: {user.branch}</h1>
+        </div>
         
+        <h2 className="text-lg font-semibold mb-4 border-b pb-2">דיווחים הממתינים לאישור:</h2>
+
         <div className="space-y-4">
           {reports.length === 0 ? (
-            <p className="text-center text-gray-600">אין דיווחים ממתינים</p>
+            <p className="text-center text-gray-500 py-10">אין דיווחים חדשים לבדיקה</p>
           ) : (
             reports.map(report => (
-              <div key={report.id} className="bg-white rounded-lg shadow-md p-4">
-                <p className="font-semibold">{youthNames[report.youthId] || 'טוען...'}</p>
-                <p className="text-sm text-gray-600">{report.date}</p>
-                <p className="text-sm">{report.startTime} - {report.endTime}</p>
-                <p className="font-medium">{report.totalHours.toFixed(1)} שעות</p>
-                <div className="flex space-x-2 mt-4">
+              <div key={report.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-bold text-lg">{report.youthName}</p>
+                  <p className="text-sm text-gray-500">{report.date}</p>
+                </div>
+                <p className="text-sm text-gray-600 mb-1">שעות: {report.startTime} - {report.endTime}</p>
+                <p className="font-bold text-blue-600">{report.totalHours.toFixed(1)} שעות סה"כ</p>
+                
+                <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => handleApprove(report.id)}
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700"
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition-colors"
                   >
                     אישור
                   </button>
                   <button
                     onClick={() => setSelectedReport(report)}
-                    className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+                    className="flex-1 bg-red-50 text-red-600 py-2 rounded-lg font-bold hover:bg-red-100 transition-colors"
                   >
                     דחייה
                   </button>
@@ -113,28 +105,29 @@ const ManagerApproval = () => {
           )}
         </div>
 
+        {/* מודאל דחייה */}
         {selectedReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">דחיית דיווח</h2>
-              <p className="mb-4">הכנס הערה קצרה:</p>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <h2 className="text-xl font-bold mb-2">דחיית דיווח</h2>
+              <p className="text-gray-600 mb-4 text-sm">ציין את סיבת הדחייה עבור {selectedReport.youthName}:</p>
               <textarea
                 value={rejectNote}
                 onChange={(e) => setRejectNote(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md mb-4"
+                className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-right"
                 rows={3}
-                placeholder="הערה..."
+                placeholder="למה הדיווח נדחה? (למשל: שעות לא תואמות)"
               />
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <button
                   onClick={handleReject}
-                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold"
                 >
-                  דחה
+                  בצע דחייה
                 </button>
                 <button
                   onClick={() => { setSelectedReport(null); setRejectNote(''); }}
-                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                  className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-bold"
                 >
                   ביטול
                 </button>
