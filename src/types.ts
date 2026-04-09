@@ -6,6 +6,8 @@ export interface Youth {
   birthDate: string;
   personalBudgetNumber: string;
   totalHours: number;
+  paidHours: number;
+  budget: number;
   password?: string;
   branch?: string;
   role?: Role;
@@ -18,11 +20,11 @@ export interface Report {
   branch: string;
   date: string;
   hours: number;
-  startTime: string;
-  endTime: string;
-  totalHours: number;
+  startTime: string; 
+  endTime: string;   
+  totalHours: number; 
   status: 'pending' | 'approved' | 'rejected';
-  note?: string;
+  note?: string;     
 }
 
 export interface Branch {
@@ -30,16 +32,9 @@ export interface Branch {
   password: string;
 }
 
-// עדכון הטיפוס הזה יפתור את רוב השגיאות ב-ManagerRates
 export interface HourlyRate {
-  id?: string;
+  id: string;
   age: number;
   rate: number;
   amount?: number; 
-}
-
-export interface Rate {
-  id: string;
-  normal: number;
-  weekend: number;
 }
