@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, getBranches, saveBranches } from '../data';
+import { db } from '../firebase';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getCurrentUser } from '../data';
 import type { Branch } from '../types';
 
 const ManageBranches = () => {
@@ -11,6 +13,16 @@ const ManageBranches = () => {
   const [newBranch, setNewBranch] = useState({ name: '', password: '' });
   const navigate = useNavigate();
 
+  const fetchBranches = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'branches'));
+      const branchData = querySnapshot.docs.map(doc => doc.data() as Branch);
+      setBranches(branchData);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       const currentUser = getCurrentUser();
@@ -19,8 +31,7 @@ const ManageBranches = () => {
         return;
       }
       setUser(currentUser);
-      const branchData = await getBranches();
-      setBranches(branchData);
+      await fetchBranches();
     };
     loadData();
   }, [navigate]);
@@ -32,11 +43,16 @@ const ManageBranches = () => {
   };
 
   const handleSave = async () => {
-    const updated = branches.map(b => b.name === editing ? { ...b, password: newPassword } : b);
-    await saveBranches(updated);
-    setBranches(updated);
-    setEditing(null);
-    setNewPassword('');
+    if (!editing) return;
+    try {
+      const branchRef = doc(db, 'branches', editing);
+      await setDoc(branchRef, { name: editing, password: newPassword }, { merge: true });
+      await fetchBranches();
+      setEditing(null);
+      setNewPassword('');
+    } catch (error) {
+      console.error("Error updating branch:", error);
+    }
   };
 
   const handleAdd = async () => {
@@ -44,119 +60,94 @@ const ManageBranches = () => {
       alert('אנא מלא את כל השדות');
       return;
     }
-    if (branches.some(b => b.name === newBranch.name)) {
-      alert('ענף כבר קיים');
-      return;
+    try {
+      await setDoc(doc(db, 'branches', newBranch.name), newBranch);
+      await fetchBranches();
+      setNewBranch({ name: '', password: '' });
+    } catch (error) {
+      console.error("Error adding branch:", error);
     }
-    const updated = [...branches, newBranch];
-    await saveBranches(updated);
-    setBranches(updated);
-    setNewBranch({ name: '', password: '' });
   };
 
   const handleDelete = async (name: string) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק ענף זה?')) {
-      const updated = branches.filter(b => b.name !== name);
-      await saveBranches(updated);
-      setBranches(updated);
+    if (window.confirm('האם אתה בטוח?')) {
+      try {
+        await deleteDoc(doc(db, 'branches', name));
+        await fetchBranches();
+      } catch (error) {
+        console.error("Error deleting branch:", error);
+      }
     }
   };
 
-  if (!user) return <div>טוען...</div>;
+  if (!user) return <div className="p-10 text-center">טוען...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold text-center mb-6 text-green-700">ניהול ענפים</h1>
         
         <button
           onClick={() => navigate('/guide')}
-          className="w-full mb-4 bg-gray-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-gray-700 transition-colors"
+          className="w-full mb-6 bg-gray-600 text-white py-3 rounded-xl shadow-md"
         >
           חזור לסיכום
         </button>
 
-        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-          <h2 className="text-lg font-semibold mb-4">הוסף ענף חדש</h2>
-          <div className="space-y-3">
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
+          <h2 className="text-lg font-bold mb-4">ענף חדש</h2>
+          <div className="space-y-4">
             <input
               type="text"
               placeholder="שם ענף"
-              title="שם ענף חדש"
               value={newBranch.name}
               onChange={(e) => setNewBranch({...newBranch, name: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
             />
             <input
               type="password"
               placeholder="סיסמה"
-              title="סיסמה לענף"
               value={newBranch.password}
               onChange={(e) => setNewBranch({...newBranch, password: e.target.value})}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
             />
             <button
               onClick={handleAdd}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-green-700 transition-colors"
+              className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors"
             >
-              הוסף
+              הוסף למערכת
             </button>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {branches.map(branch => (
-            <div key={branch.name} className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold">{branch.name}</h3>
-                <div className="flex space-x-2">
+        <div className="space-y-4">
+          {branches.map((branch) => (
+            <div key={branch.name} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-lg">{branch.name}</span>
+                <div className="flex gap-2">
                   {editing === branch.name ? (
                     <>
-                      <button
-                        onClick={handleSave}
-                        className="bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 text-sm"
-                      >
-                        שמור
-                      </button>
-                      <button
-                        onClick={() => setEditing(null)}
-                        className="bg-gray-600 text-white py-2 px-3 rounded-md hover:bg-gray-700 text-sm"
-                      >
-                        ביטול
-                      </button>
+                      <button onClick={handleSave} className="text-green-600 font-medium">שמור</button>
+                      <button onClick={() => setEditing(null)} className="text-gray-400">ביטול</button>
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => handleEdit(branch.name)}
-                        className="bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 text-sm"
-                      >
-                        ערוך
-                      </button>
-                      <button
-                        onClick={() => handleDelete(branch.name)}
-                        className="bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 text-sm"
-                      >
-                        מחק
-                      </button>
+                      <button onClick={() => handleEdit(branch.name)} className="text-blue-600">ערוך</button>
+                      <button onClick={() => handleDelete(branch.name)} className="text-red-500">מחק</button>
                     </>
                   )}
                 </div>
               </div>
-              <div>
-                {editing === branch.name ? (
-                  <input
-                    type="password"
-                    title="סיסמה חדשה לענף"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    placeholder="הכנס סיסמה חדשה"
-                  />
-                ) : (
-                  <p className="text-gray-600">סיסמה: ••••••</p>
-                )}
-              </div>
+              {editing === branch.name && (
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full mt-3 p-2 border border-blue-200 rounded-lg bg-blue-50 outline-none"
+                  placeholder="סיסמה חדשה"
+                />
+              )}
             </div>
           ))}
         </div>
