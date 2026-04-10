@@ -132,41 +132,13 @@ const Login = () => {
   };
 
   return (
-    <div className="app-shell flex items-center" dir="rtl">
-      <div className="page-wrap relative">
+    <div className="app-shell flex items-center justify-center" dir="rtl">
+      <div className="page-wrap max-w-xl relative">
         <div className="hero-orb right-0 top-4 h-28 w-28 bg-[rgba(108,168,180,0.32)] sm:h-40 sm:w-40" />
         <div className="hero-orb bottom-16 left-2 h-24 w-24 bg-[rgba(223,169,126,0.24)] sm:h-36 sm:w-36" />
 
-        <div className="grid items-center gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <section className="glass-panel relative overflow-hidden p-6 sm:p-8 lg:p-10">
-            <div className="chip mb-4">מערכת דיווח עבודה</div>
-            <h1 className="page-title mb-4">ניהול שעות עבודה עם חוויית שימוש נקייה ומהירה</h1>
-            <p className="page-subtitle mb-8 max-w-xl">
-              מסך כניסה ממורכז, נעים ומדויק שמותאם לעבודה יומיומית של נוער, מנהלי ענפים ומדריכים בכל גודל מסך.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="stat-card">
-                <div className="chip mb-3">חכם</div>
-                <div className="text-lg font-semibold">מעברים ברורים</div>
-                <p className="page-subtitle mt-2">בחירה מדויקת בין התחברות, הרשמה ואזורי ניהול.</p>
-              </div>
-              <div className="stat-card">
-                <div className="chip mb-3">מהיר</div>
-                <div className="text-lg font-semibold">מותאם למובייל</div>
-                <p className="page-subtitle mt-2">כרטיסים ממורכזים, כפתורים גדולים ופריסה נוחה גם בטלפון.</p>
-              </div>
-              <div className="stat-card">
-                <div className="chip mb-3">חי</div>
-                <div className="text-lg font-semibold">מתעדכן טוב יותר</div>
-                <p className="page-subtitle mt-2">הכנה טובה יותר לעבודה עם PWA ופריסות חדשות.</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="content-card p-6 sm:p-8">
+        <section className="content-card p-6 sm:p-8 relative">
             <div className="mb-6 text-center">
-              <div className="chip mb-3">כניסה מאובטחת</div>
               <h2 className="page-title text-[2rem] sm:text-[2.25rem]">כניסה למערכת</h2>
             </div>
 
@@ -206,7 +178,7 @@ const Login = () => {
             )}
 
             <div className="space-y-4">
-              {(role === 'youth' || role === 'manager') && (
+              {role === 'youth' && (
                 <div>
                   <label htmlFor="user-name" className="field-label">
                     שם מלא
@@ -299,7 +271,6 @@ const Login = () => {
               </button>
             </div>
           </section>
-        </div>
       </div>
     </div>
   );
