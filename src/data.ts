@@ -1,21 +1,52 @@
 import { db } from './firebase';
-import { 
-  collection, addDoc, getDocs, doc, updateDoc, setDoc, deleteDoc 
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  setDoc,
+  updateDoc,
 } from 'firebase/firestore';
-import type { Youth, Report, Branch, HourlyRate } from './types';
+import type { Branch, HourlyRate, Report, Youth } from './types';
 
-// ענפים
+const normalizeBranch = (branchDoc: Partial<Branch>, id?: string): Branch => ({
+  name: String(branchDoc?.name ?? id ?? '').trim(),
+  password: String(branchDoc?.password ?? ''),
+});
+
+const normalizeReport = (reportDoc: any, id: string): Report => ({
+  id,
+  youthId: String(reportDoc?.youthId ?? ''),
+  youthName: String(reportDoc?.youthName ?? ''),
+  branch: String(reportDoc?.branch ?? ''),
+  details: String(reportDoc?.details ?? ''),
+  date: String(reportDoc?.date ?? ''),
+  startTime: String(reportDoc?.startTime ?? ''),
+  endTime: String(reportDoc?.endTime ?? ''),
+  totalHours: Number(reportDoc?.totalHours ?? 0),
+  approvalTarget: reportDoc?.approvalTarget === 'guide' ? 'guide' : 'manager',
+  status: reportDoc?.status ?? 'pending',
+});
+
 export const getBranches = async (): Promise<Branch[]> => {
   const querySnapshot = await getDocs(collection(db, 'branches'));
-  return querySnapshot.docs.map(doc => doc.data() as Branch);
+  return querySnapshot.docs
+    .map((branchDoc) => normalizeBranch(branchDoc.data(), branchDoc.id))
+    .filter((branch) => branch.name);
 };
 
 export const saveBranch = async (branch: Branch): Promise<boolean> => {
   try {
-    await setDoc(doc(db, 'branches', branch.name), branch);
-    return true; 
-  } catch (e) {
-    console.error(e);
+    const normalizedBranch = normalizeBranch(branch);
+    if (!normalizedBranch.name || !normalizedBranch.password.trim()) {
+      return false;
+    }
+
+    await setDoc(doc(db, 'branches', normalizedBranch.name), normalizedBranch);
+    return true;
+  } catch (error) {
+    console.error(error);
     return false;
   }
 };
@@ -24,21 +55,20 @@ export const deleteBranch = async (branchName: string) => {
   await deleteDoc(doc(db, 'branches', branchName));
 };
 
-// נוער
 export const getYouth = async (): Promise<Youth[]> => {
   const querySnapshot = await getDocs(collection(db, 'youth'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Youth));
+  return querySnapshot.docs.map((youthDoc) => ({ id: youthDoc.id, ...youthDoc.data() } as Youth));
 };
 
-export const addYouth = async (youth: any) => {
-  const id = `${youth.name}_${youth.personalBudgetNumber}`;
+export const addYouth = async (youth: Omit<Youth, 'id'>) => {
+  const id = `${String(youth.name).trim()}_${String(youth.personalBudgetNumber).trim()}`;
   await setDoc(doc(db, 'youth', id), { ...youth, id, totalHours: 0, lastResetHours: 0 });
+  return id;
 };
 
-// שכר ותעריפים
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HourlyRate));
+  return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() } as HourlyRate));
 };
 
 export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
@@ -49,31 +79,36 @@ export const resetPaidHours = async (youthId: string, currentTotal: number) => {
   await updateDoc(doc(db, 'youth', youthId), { lastResetHours: currentTotal });
 };
 
-// דיווחים
 export const addReport = async (report: Omit<Report, 'id'>) => {
   await addDoc(collection(db, 'reports'), report);
 };
 
 export const getReports = async (): Promise<Report[]> => {
   const querySnapshot = await getDocs(collection(db, 'reports'));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Report));
+  return querySnapshot.docs.map((reportDoc) => normalizeReport(reportDoc.data(), reportDoc.id));
 };
 
 export const updateReport = async (reportId: string, updates: Partial<Report>) => {
   await updateDoc(doc(db, 'reports', reportId), updates);
 };
 
-// עזר
 export const getManagers = async () => {
   const branches = await getBranches();
-  return branches.map(b => ({ ...b, role: 'manager' as const, branch: b.name }));
+  return branches.map((branch) => ({ ...branch, role: 'manager' as const, branch: branch.name }));
 };
 
 export const calculateAge = (birthDate: string): number => {
   const birth = new Date(birthDate);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
-  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
+
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) {
+    age--;
+  }
+
   return age;
 };
 

@@ -16,10 +16,12 @@ export interface Report {
   youthId: string;
   youthName: string;
   branch: string;
+  details?: string;
   date: string;
   startTime: string;
   endTime: string;
   totalHours: number;
+  approvalTarget?: 'manager' | 'guide';
   status: 'pending' | 'approved' | 'rejected';
 }
 

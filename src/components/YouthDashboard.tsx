@@ -1,31 +1,84 @@
-import { useState } from 'react';
-import { getCurrentUser, addReport } from '../data';
+import { useEffect, useMemo, useState } from 'react';
+import { addReport, getBranches, getCurrentUser } from '../data';
+import type { Branch } from '../types';
+
+const OTHER_BRANCH_NAME = 'אחר';
+
+const getTodayDate = () => new Date().toISOString().split('T')[0];
 
 const YouthDashboard = () => {
-  const [report, setReport] = useState({ branch: '', date: '', startTime: '', endTime: '' });
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [report, setReport] = useState({
+    branch: '',
+    date: getTodayDate(),
+    startTime: '',
+    endTime: '',
+    details: '',
+  });
   const user = getCurrentUser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    
+  useEffect(() => {
+    const loadBranches = async () => {
+      const branchList = await getBranches();
+      setBranches(branchList);
+    };
+
+    loadBranches();
+  }, []);
+
+  const branchOptions = useMemo(() => {
+    const existingNames = new Set(branches.map((branch) => branch.name));
+    return existingNames.has(OTHER_BRANCH_NAME) ? branches : [...branches, { name: OTHER_BRANCH_NAME, password: '' }];
+  }, [branches]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user?.id) {
+      alert('צריך להתחבר מחדש לפני שליחת דיווח');
+      return;
+    }
+
+    if (!report.branch || !report.date || !report.startTime || !report.endTime) {
+      alert('נא למלא את כל השדות');
+      return;
+    }
+
+    const isOtherBranch = report.branch === OTHER_BRANCH_NAME;
+    if (isOtherBranch && !report.details.trim()) {
+      alert('בדיווח על ענף אחר חייבים להוסיף פירוט עבודה');
+      return;
+    }
+
     const start = new Date(`2000-01-01T${report.startTime}`);
     const end = new Date(`2000-01-01T${report.endTime}`);
     const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
+    if (Number.isNaN(totalHours) || totalHours <= 0) {
+      alert('שעת הסיום חייבת להיות אחרי שעת ההתחלה');
+      return;
+    }
+
     await addReport({
       youthId: user.id,
-      youthName: user.name, // הוספת השדה החסר
+      youthName: user.name,
       branch: report.branch,
+      details: isOtherBranch ? report.details.trim() : '',
       date: report.date,
       startTime: report.startTime,
       endTime: report.endTime,
       totalHours,
-      status: 'pending'
+      approvalTarget: isOtherBranch ? 'guide' : 'manager',
+      status: 'pending',
     });
 
-    alert("דיווח נשלח!");
-    setReport({ branch: '', date: '', startTime: '', endTime: '' });
+    alert(isOtherBranch ? 'הדיווח נשלח למדריך' : 'הדיווח נשלח למנהל הענף');
+    setReport({
+      branch: '',
+      date: getTodayDate(),
+      startTime: '',
+      endTime: '',
+      details: '',
+    });
   };
 
   return (
@@ -33,24 +86,94 @@ const YouthDashboard = () => {
       <h1 className="text-2xl font-bold mb-6">דיווח שעות</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="b" className="block font-bold">ענף:</label>
-          <input id="b" required className="w-full border p-2 rounded" value={report.branch} onChange={e => setReport({...report, branch: e.target.value})} />
+          <label htmlFor="b" className="block font-bold">
+            ענף:
+          </label>
+          <select
+            id="b"
+            required
+            className="w-full border p-2 rounded"
+            value={report.branch}
+            onChange={(event) =>
+              setReport((current) => ({
+                ...current,
+                branch: event.target.value,
+                details: event.target.value === OTHER_BRANCH_NAME ? current.details : '',
+              }))
+            }
+          >
+            <option value="">בחר ענף</option>
+            {branchOptions.map((branch) => (
+              <option key={branch.name} value={branch.name}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
         </div>
+
         <div>
-          <label htmlFor="d" className="block font-bold">תאריך:</label>
-          <input id="d" type="date" required className="w-full border p-2 rounded" value={report.date} onChange={e => setReport({...report, date: e.target.value})} />
+          <label htmlFor="d" className="block font-bold">
+            תאריך:
+          </label>
+          <input
+            id="d"
+            type="date"
+            required
+            className="w-full border p-2 rounded"
+            value={report.date}
+            onChange={(event) => setReport({ ...report, date: event.target.value })}
+          />
         </div>
+
         <div className="flex gap-2">
           <div className="flex-1">
-            <label htmlFor="s" className="block font-bold">התחלה:</label>
-            <input id="s" type="time" required className="w-full border p-2 rounded" value={report.startTime} onChange={e => setReport({...report, startTime: e.target.value})} />
+            <label htmlFor="s" className="block font-bold">
+              התחלה:
+            </label>
+            <input
+              id="s"
+              type="time"
+              required
+              className="w-full border p-2 rounded"
+              value={report.startTime}
+              onChange={(event) => setReport({ ...report, startTime: event.target.value })}
+            />
           </div>
+
           <div className="flex-1">
-            <label htmlFor="e" className="block font-bold">סיום:</label>
-            <input id="e" type="time" required className="w-full border p-2 rounded" value={report.endTime} onChange={e => setReport({...report, endTime: e.target.value})} />
+            <label htmlFor="e" className="block font-bold">
+              סיום:
+            </label>
+            <input
+              id="e"
+              type="time"
+              required
+              className="w-full border p-2 rounded"
+              value={report.endTime}
+              onChange={(event) => setReport({ ...report, endTime: event.target.value })}
+            />
           </div>
         </div>
-        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded font-bold">שלח דיווח</button>
+
+        {report.branch === OTHER_BRANCH_NAME && (
+          <div>
+            <label htmlFor="details" className="block font-bold">
+              פירוט העבודה:
+            </label>
+            <textarea
+              id="details"
+              required
+              className="w-full border p-2 rounded min-h-28"
+              value={report.details}
+              onChange={(event) => setReport({ ...report, details: event.target.value })}
+              placeholder="מה נעשה בפועל בענף האחר?"
+            />
+          </div>
+        )}
+
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded font-bold">
+          שלח דיווח
+        </button>
       </form>
     </div>
   );
