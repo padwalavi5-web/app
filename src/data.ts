@@ -66,6 +66,8 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   return id;
 };
 
+// --- תעריפים (Rates) ---
+
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
   return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() } as HourlyRate));
@@ -74,6 +76,18 @@ export const getRates = async (): Promise<HourlyRate[]> => {
 export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
   await addDoc(collection(db, 'rates'), rate);
 };
+
+// פונקציית מחיקה שהייתה חסרה
+export const deleteRate = async (rateId: string) => {
+  await deleteDoc(doc(db, 'rates', rateId));
+};
+
+// פונקציית עדכון שהייתה חסרה
+export const updateRate = async (rateId: string, updates: Partial<HourlyRate>) => {
+  await updateDoc(doc(db, 'rates', rateId), updates);
+};
+
+// ------------------------
 
 export const resetPaidHours = async (youthId: string, currentTotal: number) => {
   await updateDoc(doc(db, 'youth', youthId), { lastResetHours: currentTotal });
