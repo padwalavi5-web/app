@@ -1,52 +1,55 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getYouth, getReports, getRates, calculateAge, resetPaidHours, getCurrentUser } from '../data';
-import type { Youth } from '../types';
+import { getYouth, getReports, resetPaidHours } from '../data';
+import type { Youth, Report } from '../types';
 
 const GuideSummary = () => {
-  const [youthData, setYouthData] = useState<Youth[]>([]);
-  const navigate = useNavigate();
+  const [youthList, setYouthList] = useState<Youth[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
 
-  const loadData = async () => {
-    const youth = await getYouth();
-    const reports = await getReports();
-    const rates = await getRates();
-
-    const processed = youth.map(y => {
-      const approvedHours = reports
-        .filter(r => r.youthId === y.id && r.status === 'approved')
-        .reduce((sum, r) => sum + r.totalHours, 0);
-      
-      const baseline = y.lastResetHours || 90;
-      const paidHours = Math.max(0, approvedHours - baseline);
-      const rate = rates.find(r => r.age === calculateAge(y.birthDate))?.rate || 0;
-
-      return { ...y, totalHours: approvedHours, paidHours, budget: paidHours * rate };
-    });
-    setYouthData(processed);
+  const fetchData = async () => {
+    const y = await getYouth();
+    const r = await getReports();
+    setYouthList(y);
+    setReports(r);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleMonthlyReset = async () => {
-    if (!window.confirm("זה יאפס רק את השעות שמעל 90 (לתשלום). להמשיך?")) return;
-    for (const y of youthData) {
-      await resetPaidHours(y.id, y.totalHours);
+  const handleReset = async (youthId: string, currentTotal: number) => {
+    if (window.confirm("לאפס שעות ולסמן כשולם?")) {
+      await resetPaidHours(youthId, currentTotal);
+      await fetchData();
     }
-    await loadData();
   };
 
   return (
-    <div className="p-4" dir="rtl">
-      <h1 className="text-2xl font-bold mb-4">סיכום שעות לתשלום</h1>
-      <button onClick={handleMonthlyReset} className="bg-red-600 text-white p-2 rounded mb-4">סגור חודש (איפוס תשלום)</button>
-      <div className="space-y-2">
-        {youthData.map(y => (
-          <div key={y.id} className="border p-3 rounded">
-            <div className="font-bold">{y.name}</div>
-            <div>שעות לתשלום: {y?.paidHours?.toFixed(1)} | תקציב: ₪{y?.budget?.toFixed(2)}</div>
-          </div>
-        ))}
+    <div className="p-4 text-right" dir="rtl">
+      <h1 className="text-2xl font-bold mb-4">סיכום שעות</h1>
+      <div className="space-y-4">
+        {youthList.map(y => {
+          const approvedHours = reports
+            .filter(r => r.youthId === y.id && r.status === 'approved')
+            .reduce((sum, r) => sum + r.totalHours, 0);
+          
+          const hoursToPay = approvedHours - y.lastResetHours;
+
+          return (
+            <div key={y.id} className="p-4 border rounded-xl shadow-sm bg-white flex justify-between items-center">
+              <button 
+                onClick={() => handleReset(y.id, approvedHours)}
+                className="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold"
+              >
+                סמן כשולם
+              </button>
+              <div>
+                <div className="font-bold">{y.name}</div>
+                <div className="text-sm text-blue-600 font-bold">שעות לתשלום: {hoursToPay.toFixed(1)}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

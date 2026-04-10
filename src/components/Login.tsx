@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUser, FaUserTie, FaCrown } from 'react-icons/fa';
 import { getYouth, getManagers, getBranches, setCurrentUser, addYouth, calculateAge } from '../data';
 import type { Role } from '../types';
 
@@ -30,13 +29,9 @@ const Login = () => {
         setCurrentUser({ ...user, role: 'youth' });
         navigate('/youth');
       } else {
-        if (!name.trim() || !budgetNumber.trim() || !birthDate.trim()) {
-          alert('אנא מלא את כל השדות'); return;
-        }
+        if (!name.trim() || !budgetNumber.trim() || !birthDate.trim()) { alert('נא למלא הכל'); return; }
         const ageNum = calculateAge(birthDate);
-        if (isNaN(ageNum) || ageNum < 14 || ageNum > 18) {
-          alert('גיל חייב להיות בין 14 ל-18'); return;
-        }
+        if (ageNum < 14 || ageNum > 18) { alert('גיל לא תקין'); return; }
         const newYouth = { name: name.trim(), birthDate, personalBudgetNumber: budgetNumber.trim(), totalHours: 0, lastResetHours: 0 };
         await addYouth(newYouth);
         setCurrentUser({ ...newYouth, role: 'youth' });
@@ -45,58 +40,48 @@ const Login = () => {
     } else if (role === 'manager') {
       const managers = await getManagers();
       const manager = managers.find(m => m.name === name && m.branch === branch && m.password === password);
-      if (manager) {
-        setCurrentUser({ ...manager, role: 'manager' });
-        navigate('/manager');
-      } else { alert('פרטים שגויים'); }
+      if (manager) { setCurrentUser({ ...manager, role: 'manager' }); navigate('/manager'); }
+      else { alert('פרטים שגויים'); }
     } else if (role === 'guide') {
-      if (password === 'admin') {
-        setCurrentUser({ role: 'guide' });
-        navigate('/guide');
-      } else { alert('סיסמה שגויה'); }
+      if (password === 'admin') { setCurrentUser({ role: 'guide' }); navigate('/guide'); }
+      else { alert('סיסמה שגויה'); }
     }
   };
 
-  const roleIcons = { youth: FaUser, manager: FaUserTie, guide: FaCrown };
-
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border border-gray-100">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-right" dir="rtl">
+      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border">
         <h1 className="text-3xl font-bold text-center mb-8 text-blue-600">כניסה למערכת</h1>
         <div className="grid grid-cols-3 gap-2 mb-6">
-          {(['youth', 'manager', 'guide'] as Role[]).map((r) => {
-            const Icon = roleIcons[r];
-            return (
-              <button key={r} onClick={() => setRole(r)} className={`p-3 rounded-xl border-2 transition-all ${role === r ? 'border-blue-500 bg-blue-50' : 'border-gray-100 opacity-60'}`}>
-                <Icon className={`mx-auto mb-1 text-xl ${role === r ? 'text-blue-600' : 'text-gray-400'}`} />
-                <span className="text-xs font-bold block text-center">{r === 'youth' ? 'נוער' : r === 'manager' ? 'מנהל' : 'מדריך'}</span>
-              </button>
-            );
-          })}
+          {(['youth', 'manager', 'guide'] as Role[]).map((r) => (
+            <button key={r} onClick={() => setRole(r)} className={`p-3 rounded-xl border-2 ${role === r ? 'border-blue-500 bg-blue-50' : 'border-gray-100'}`}>
+              <span className="text-xs font-bold block">{r === 'youth' ? 'נוער' : r === 'manager' ? 'מנהל' : 'מדריך'}</span>
+            </button>
+          ))}
         </div>
         <div className="space-y-4">
           {(role === 'youth' || role === 'manager') && (
             <div>
-              <label htmlFor="user-name-input" className="sr-only">שם מלא</label>
-              <input id="user-name-input" name="user-name" type="text" placeholder="שם מלא" title="שם מלא" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 border rounded-xl text-right" />
+              <label htmlFor="user-name" className="block text-sm mb-1 font-bold">שם מלא:</label>
+              <input id="user-name" name="name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 border rounded-xl" />
             </div>
           )}
           {role === 'youth' && (
             <>
               <div>
-                <label htmlFor="budget-input" className="sr-only">מספר תקציב</label>
-                <input id="budget-input" name="budget-number" type="text" placeholder="מספר תקציב אישי" title="מספר תקציב אישי" value={budgetNumber} onChange={(e) => setBudgetNumber(e.target.value)} className="w-full p-3 border rounded-xl text-right" />
+                <label htmlFor="budget-num" className="block text-sm mb-1 font-bold">מספר תקציב:</label>
+                <input id="budget-num" name="budget" type="text" value={budgetNumber} onChange={(e) => setBudgetNumber(e.target.value)} className="w-full p-3 border rounded-xl" />
               </div>
               <div>
-                <label htmlFor="birth-input" className="sr-only">תאריך לידה</label>
-                <input id="birth-input" name="birth-date" type="date" title="תאריך לידה" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full p-3 border rounded-xl text-right" />
+                <label htmlFor="birth" className="block text-sm mb-1 font-bold">תאריך לידה:</label>
+                <input id="birth" name="birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full p-3 border rounded-xl" />
               </div>
             </>
           )}
           {role === 'manager' && (
             <div>
-              <label htmlFor="branch-select" className="sr-only">בחר ענף</label>
-              <select id="branch-select" name="branch" title="בחר ענף" value={branch} onChange={(e) => setBranch(e.target.value)} className="w-full p-3 border rounded-xl text-right">
+              <label htmlFor="branch-sel" className="block text-sm mb-1 font-bold">ענף:</label>
+              <select id="branch-sel" name="branch" value={branch} onChange={(e) => setBranch(e.target.value)} className="w-full p-3 border rounded-xl">
                 <option value="">בחר ענף</option>
                 {branches.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
               </select>
@@ -104,11 +89,11 @@ const Login = () => {
           )}
           {(role === 'manager' || role === 'guide') && (
             <div>
-              <label htmlFor="pass-input" className="sr-only">סיסמה</label>
-              <input id="pass-input" name="password" type="password" placeholder="סיסמה" title="סיסמה" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 border rounded-xl text-right" />
+              <label htmlFor="pwd" className="block text-sm mb-1 font-bold">סיסמה:</label>
+              <input id="pwd" name="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 border rounded-xl" />
             </div>
           )}
-          <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 mt-4">התחברות</button>
+          <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">התחברות</button>
         </div>
       </div>
     </div>

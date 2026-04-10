@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { getCurrentUser, addReport } from '../data';
-import { useNavigate } from 'react-router-dom';
 
 const YouthDashboard = () => {
   const [report, setReport] = useState({ branch: '', date: '', startTime: '', endTime: '' });
   const user = getCurrentUser();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,14 +13,9 @@ const YouthDashboard = () => {
     const end = new Date(`2000-01-01T${report.endTime}`);
     const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
-    if (totalHours <= 0) {
-      alert("זמן סיום חייב להיות אחרי זמן התחלה");
-      return;
-    }
-
     await addReport({
       youthId: user.id,
-      youthName: user.name, // תיקון שגיאת ה-Missing Property
+      youthName: user.name, // הוספת השדה החסר
       branch: report.branch,
       date: report.date,
       startTime: report.startTime,
@@ -31,71 +24,33 @@ const YouthDashboard = () => {
       status: 'pending'
     });
 
-    alert("דיווח נשלח בהצלחה!");
+    alert("דיווח נשלח!");
     setReport({ branch: '', date: '', startTime: '', endTime: '' });
   };
 
-  if (!user) return <div className="p-4 text-right">אנא התחבר מחדש...</div>;
-
   return (
     <div className="p-4 max-w-md mx-auto text-right" dir="rtl">
-      <button onClick={() => navigate('/')} className="mb-4 text-blue-600 underline">התנתק</button>
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">שלום, {user.name}</h1>
-      
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-2xl shadow-md border">
+      <h1 className="text-2xl font-bold mb-6">דיווח שעות</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="branch-input" className="block mb-1 font-bold">ענף:</label>
-          <input 
-            id="branch-input"
-            name="branch"
-            type="text" 
-            required 
-            className="w-full p-2 border rounded-xl" 
-            value={report.branch} 
-            onChange={e => setReport({...report, branch: e.target.value})} 
-          />
+          <label htmlFor="b" className="block font-bold">ענף:</label>
+          <input id="b" required className="w-full border p-2 rounded" value={report.branch} onChange={e => setReport({...report, branch: e.target.value})} />
         </div>
         <div>
-          <label htmlFor="date-input" className="block mb-1 font-bold">תאריך:</label>
-          <input 
-            id="date-input"
-            name="date"
-            type="date" 
-            required 
-            className="w-full p-2 border rounded-xl" 
-            value={report.date} 
-            onChange={e => setReport({...report, date: e.target.value})} 
-          />
+          <label htmlFor="d" className="block font-bold">תאריך:</label>
+          <input id="d" type="date" required className="w-full border p-2 rounded" value={report.date} onChange={e => setReport({...report, date: e.target.value})} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label htmlFor="start-input" className="block mb-1 font-bold">התחלה:</label>
-            <input 
-              id="start-input"
-              name="startTime"
-              type="time" 
-              required 
-              className="w-full p-2 border rounded-xl" 
-              value={report.startTime} 
-              onChange={e => setReport({...report, startTime: e.target.value})} 
-            />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label htmlFor="s" className="block font-bold">התחלה:</label>
+            <input id="s" type="time" required className="w-full border p-2 rounded" value={report.startTime} onChange={e => setReport({...report, startTime: e.target.value})} />
           </div>
-          <div>
-            <label htmlFor="end-input" className="block mb-1 font-bold">סיום:</label>
-            <input 
-              id="end-input"
-              name="endTime"
-              type="time" 
-              required 
-              className="w-full p-2 border rounded-xl" 
-              value={report.endTime} 
-              onChange={e => setReport({...report, endTime: e.target.value})} 
-            />
+          <div className="flex-1">
+            <label htmlFor="e" className="block font-bold">סיום:</label>
+            <input id="e" type="time" required className="w-full border p-2 rounded" value={report.endTime} onChange={e => setReport({...report, endTime: e.target.value})} />
           </div>
         </div>
-        <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold shadow-lg mt-4 transition-transform active:scale-95">
-          שלח דיווח לאישור
-        </button>
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded font-bold">שלח דיווח</button>
       </form>
     </div>
   );
