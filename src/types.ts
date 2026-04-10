@@ -6,8 +6,7 @@ export interface Youth {
   birthDate: string;
   personalBudgetNumber: string;
   totalHours: number;
-  lastResetHours?: number; // השעות שהיו במערכת בזמן האיפוס האחרון
-  // שדות וירטואליים לחישוב בזמן אמת
+  lastResetHours: number;
   paidHours?: number; 
   budget?: number;
 }
