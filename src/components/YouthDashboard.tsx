@@ -82,99 +82,114 @@ const YouthDashboard = () => {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto text-right" dir="rtl">
-      <h1 className="text-2xl font-bold mb-6">דיווח שעות</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="b" className="block font-bold">
-            ענף:
-          </label>
-          <select
-            id="b"
-            required
-            className="w-full border p-2 rounded"
-            value={report.branch}
-            onChange={(event) =>
-              setReport((current) => ({
-                ...current,
-                branch: event.target.value,
-                details: event.target.value === OTHER_BRANCH_NAME ? current.details : '',
-              }))
-            }
-          >
-            <option value="">בחר ענף</option>
-            {branchOptions.map((branch) => (
-              <option key={branch.name} value={branch.name}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="d" className="block font-bold">
-            תאריך:
-          </label>
-          <input
-            id="d"
-            type="date"
-            required
-            className="w-full border p-2 rounded"
-            value={report.date}
-            onChange={(event) => setReport({ ...report, date: event.target.value })}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label htmlFor="s" className="block font-bold">
-              התחלה:
-            </label>
-            <input
-              id="s"
-              type="time"
-              required
-              className="w-full border p-2 rounded"
-              value={report.startTime}
-              onChange={(event) => setReport({ ...report, startTime: event.target.value })}
-            />
+    <div className="app-shell" dir="rtl">
+      <div className="page-wrap max-w-3xl">
+        <div className="glass-panel p-6 sm:p-8">
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="chip mb-3">דיווח יומי</div>
+              <h1 className="page-title mb-2">דיווח שעות</h1>
+              <p className="page-subtitle">טופס ממורכז, פשוט ונעים עם זרימה מיוחדת לענף "אחר".</p>
+            </div>
+            <div className="content-card px-4 py-3 text-sm">
+              <div className="font-semibold">{user?.name || 'משתמש'}</div>
+              <div className="page-subtitle">מוכן לשליחת דיווח חדש</div>
+            </div>
           </div>
 
-          <div className="flex-1">
-            <label htmlFor="e" className="block font-bold">
-              סיום:
-            </label>
-            <input
-              id="e"
-              type="time"
-              required
-              className="w-full border p-2 rounded"
-              value={report.endTime}
-              onChange={(event) => setReport({ ...report, endTime: event.target.value })}
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="content-card space-y-5 p-5 sm:p-6">
+            <div>
+              <label htmlFor="b" className="field-label">
+                ענף
+              </label>
+              <select
+                id="b"
+                required
+                className="field-input"
+                value={report.branch}
+                onChange={(event) =>
+                  setReport((current) => ({
+                    ...current,
+                    branch: event.target.value,
+                    details: event.target.value === OTHER_BRANCH_NAME ? current.details : '',
+                  }))
+                }
+              >
+                <option value="">בחר ענף</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch.name} value={branch.name}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="d" className="field-label">
+                תאריך
+              </label>
+              <input
+                id="d"
+                type="date"
+                required
+                className="field-input"
+                value={report.date}
+                onChange={(event) => setReport({ ...report, date: event.target.value })}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="s" className="field-label">
+                  שעת התחלה
+                </label>
+                <input
+                  id="s"
+                  type="time"
+                  required
+                  className="field-input"
+                  value={report.startTime}
+                  onChange={(event) => setReport({ ...report, startTime: event.target.value })}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="e" className="field-label">
+                  שעת סיום
+                </label>
+                <input
+                  id="e"
+                  type="time"
+                  required
+                  className="field-input"
+                  value={report.endTime}
+                  onChange={(event) => setReport({ ...report, endTime: event.target.value })}
+                />
+              </div>
+            </div>
+
+            {report.branch === OTHER_BRANCH_NAME && (
+              <div>
+                <label htmlFor="details" className="field-label">
+                  פירוט העבודה
+                </label>
+                <textarea
+                  id="details"
+                  required
+                  className="field-input min-h-32"
+                  value={report.details}
+                  onChange={(event) => setReport({ ...report, details: event.target.value })}
+                  placeholder="מה נעשה בפועל בענף האחר?"
+                />
+              </div>
+            )}
+
+            <button type="submit" className="btn-primary w-full">
+              שלח דיווח
+            </button>
+          </form>
         </div>
-
-        {report.branch === OTHER_BRANCH_NAME && (
-          <div>
-            <label htmlFor="details" className="block font-bold">
-              פירוט העבודה:
-            </label>
-            <textarea
-              id="details"
-              required
-              className="w-full border p-2 rounded min-h-28"
-              value={report.details}
-              onChange={(event) => setReport({ ...report, details: event.target.value })}
-              placeholder="מה נעשה בפועל בענף האחר?"
-            />
-          </div>
-        )}
-
-        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded font-bold">
-          שלח דיווח
-        </button>
-      </form>
+      </div>
     </div>
   );
 };

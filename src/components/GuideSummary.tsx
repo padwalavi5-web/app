@@ -46,82 +46,96 @@ const GuideSummary = () => {
   );
 
   return (
-    <div className="p-4 text-right max-w-4xl mx-auto" dir="rtl">
-      <div className="flex flex-wrap gap-2 mb-6">
-        <button onClick={() => navigate('/guide/youth')} className="bg-green-600 text-white px-4 py-2 rounded-xl">
-          ניהול נוער
-        </button>
-        <button onClick={() => navigate('/guide/branches')} className="bg-purple-600 text-white px-4 py-2 rounded-xl">
-          ניהול ענפים
-        </button>
-        <button onClick={() => navigate('/guide/rates')} className="bg-orange-500 text-white px-4 py-2 rounded-xl">
-          תעריפי שכר
-        </button>
-      </div>
+    <div className="app-shell" dir="rtl">
+      <div className="page-wrap space-y-6">
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="chip mb-3">אזור מדריך</div>
+              <h1 className="page-title mb-2">מרכז בקרה</h1>
+              <p className="page-subtitle">תצוגה מרוכזת של שעות לתשלום, ניהול בסיס הנתונים ואישור דיווחים מיוחדים.</p>
+            </div>
 
-      <h1 className="text-2xl font-bold mb-4">סיכום שעות</h1>
-
-      <div className="space-y-4 mb-10">
-        {youthList.map((youth) => {
-          const approvedHours = reports
-            .filter((report) => report.youthId === youth.id && report.status === 'approved')
-            .reduce((sum, report) => sum + report.totalHours, 0);
-
-          const hoursToPay = approvedHours - youth.lastResetHours;
-
-          return (
-            <div
-              key={youth.id}
-              className="p-4 border rounded-xl shadow-sm bg-white flex justify-between items-center gap-4"
-            >
-              <button
-                onClick={() => handleReset(youth.id, approvedHours)}
-                className="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold"
-              >
-                סמן כשולם
+            <div className="grid gap-2 sm:grid-cols-3">
+              <button onClick={() => navigate('/guide/youth')} className="btn-primary">
+                ניהול נוער
               </button>
-              <div>
-                <div className="font-bold">{youth.name}</div>
-                <div className="text-sm text-blue-600 font-bold">שעות לתשלום: {hoursToPay.toFixed(1)}</div>
-              </div>
+              <button onClick={() => navigate('/guide/branches')} className="btn-secondary">
+                ניהול ענפים
+              </button>
+              <button onClick={() => navigate('/guide/rates')} className="btn-secondary">
+                תעריפי שכר
+              </button>
             </div>
-          );
-        })}
-      </div>
+          </div>
 
-      <h2 className="text-2xl font-bold mb-4 text-slate-700">דיווחי "אחר" שמחכים למדריך</h2>
+          <div className="grid-responsive">
+            {youthList.map((youth) => {
+              const approvedHours = reports
+                .filter((report) => report.youthId === youth.id && report.status === 'approved')
+                .reduce((sum, report) => sum + report.totalHours, 0);
 
-      <div className="space-y-4">
-        {guideReports.length === 0 ? (
-          <p className="text-gray-500">אין כרגע דיווחים ממתינים בענף אחר.</p>
-        ) : (
-          guideReports.map((report) => (
-            <div key={report.id} className="border p-4 rounded-xl shadow-sm bg-white">
-              <div className="font-bold text-lg">{report.youthName}</div>
-              <div className="text-sm text-gray-600 mb-2">
-                {report.date} | {report.startTime}-{report.endTime}
+              const hoursToPay = approvedHours - youth.lastResetHours;
+
+              return (
+                <div key={youth.id} className="stat-card flex items-center justify-between gap-4">
+                  <button onClick={() => handleReset(youth.id, approvedHours)} className="btn-primary px-3 py-2 text-sm">
+                    סמן כשולם
+                  </button>
+                  <div className="text-right">
+                    <div className="text-lg font-semibold">{youth.name}</div>
+                    <div className="page-subtitle">מעקב שעות ותשלום</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--accent-strong)]">
+                      {hoursToPay.toFixed(1)} שעות לתשלום
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="mb-6">
+            <div className="chip mb-3">בדיקות חריגים</div>
+            <h2 className="page-title text-[2rem] sm:text-[2.4rem]">דיווחי "אחר" שמחכים למדריך</h2>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {guideReports.length === 0 ? (
+              <div className="content-card p-6">
+                <p className="page-subtitle">אין כרגע דיווחים ממתינים בענף אחר.</p>
               </div>
-              <div className="font-bold text-blue-600 mb-2">{report.totalHours.toFixed(1)} שעות</div>
-              <div className="bg-slate-50 p-3 rounded-lg mb-3 whitespace-pre-wrap">
-                {report.details || 'לא הוזן פירוט עבודה'}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleGuideDecision(report.id, 'approved')}
-                  className="flex-1 bg-green-600 text-white p-2 rounded-lg font-bold"
-                >
-                  אישור
-                </button>
-                <button
-                  onClick={() => handleGuideDecision(report.id, 'rejected')}
-                  className="flex-1 bg-red-50 text-red-600 p-2 rounded-lg font-bold"
-                >
-                  דחייה
-                </button>
-              </div>
-            </div>
-          ))
-        )}
+            ) : (
+              guideReports.map((report) => (
+                <div key={report.id} className="content-card p-5">
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg font-semibold">{report.youthName}</div>
+                      <div className="page-subtitle">
+                        {report.date} | {report.startTime}-{report.endTime}
+                      </div>
+                    </div>
+                    <div className="chip">{report.totalHours.toFixed(1)} שעות</div>
+                  </div>
+
+                  <div className="mb-4 rounded-2xl bg-[rgba(237,244,247,0.85)] p-4 whitespace-pre-wrap">
+                    {report.details || 'לא הוזן פירוט עבודה'}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button onClick={() => handleGuideDecision(report.id, 'approved')} className="btn-primary flex-1">
+                      אישור
+                    </button>
+                    <button onClick={() => handleGuideDecision(report.id, 'rejected')} className="btn-danger flex-1">
+                      דחייה
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
