@@ -109,9 +109,7 @@ const Login = () => {
 
     if (role === 'manager') {
       const managers = await getManagers();
-      const manager = managers.find(
-        (item) => item.name === name.trim() && item.branch === branch && item.password === password,
-      );
+      const manager = managers.find((item) => item.branch === branch && item.password === password);
 
       if (!manager) {
         alert('פרטים שגויים');

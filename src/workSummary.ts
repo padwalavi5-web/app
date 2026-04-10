@@ -37,6 +37,7 @@ export interface YouthWorkSummary {
   payablePendingHours: number;
   currentMonthHours: number;
   currentMonthPayableHours: number;
+  currentMonthPayableAmount: number;
   totalEarnedAmount: number;
   payablePendingAmount: number;
 }
@@ -91,6 +92,7 @@ export const buildYouthWorkSummary = (
     payablePendingHours,
     currentMonthHours,
     currentMonthPayableHours,
+    currentMonthPayableAmount: currentMonthPayableHours * hourlyRate,
     totalEarnedAmount: payableCumulativeHours * hourlyRate,
     payablePendingAmount: payablePendingHours * hourlyRate,
   };
