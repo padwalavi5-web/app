@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getRates, getReports, getYouth, resetPaidHours } from '../data';
+import { 
+  getRates, 
+  getReports, 
+  getYouth, 
+  resetPaidHours 
+} from '../data';
 import type { HourlyRate, Report, Youth } from '../types';
-import { buildYouthWorkSummary, getWorkCycleStart, MANDATORY_HOURS_LIMIT } from '../workSummary';
-
-const monthFormatter = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
+import { buildYouthWorkSummary } from '../workSummary';
 
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -44,78 +45,51 @@ const GuideSummary = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `summary-${new Date().toLocaleDateString()}.csv`;
+    link.download = 'summary.csv';
     link.click();
   };
 
   const handleReset = async () => {
-    if (!window.confirm('האם לאפס שעות לכולם?')) return;
+    if (!window.confirm('לאפס שעות?')) return;
     setIsLoading(true);
     try {
       await Promise.all(summaryRows.map(r => resetPaidHours(r.youth.id, r.summary.payableCumulativeHours)));
       await fetchData();
-      alert('השעות אופסו');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center" dir="rtl">טוען נתונים...</div>;
+  if (isLoading) return <div className="p-8 text-center" dir="rtl">טוען...</div>;
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap space-y-6">
-        <section className="glass-panel p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="page-title">סיכום מדריך</h1>
-              <p className="page-subtitle">{monthFormatter.format(new Date())}</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleExport} className="btn-secondary">📊 ייצוא</button>
-              <button onClick={handleReset} className="btn-primary bg-red-600">🔄 איפוס שעות</button>
-              <button onClick={() => navigate('/guide/youth')} className="btn-secondary">נוער</button>
-              <button onClick={() => navigate('/guide/branches')} className="btn-secondary">ענפים</button>
-            </div>
+      <div className="page-wrap p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="page-title">סיכום מדריך</h1>
+          <div className="flex gap-2">
+            <button onClick={handleExport} className="btn-secondary">📊 אקסל</button>
+            <button onClick={handleReset} className="btn-primary bg-red-600">🔄 איפוס</button>
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="content-card p-4 text-center">מחזור החל: {getWorkCycleStart().toLocaleDateString()}</div>
-            <div className="content-card p-4 text-center">רף חובה: {MANDATORY_HOURS_LIMIT}</div>
-            <div className="content-card p-4 text-center">נערים: {youthList.length}</div>
-          </div>
-        </section>
-
-        <section className="glass-panel p-4 overflow-x-auto">
-          <table className="w-full text-right">
-            <thead>
-              <tr className="border-b text-slate-500 text-sm">
-                <th className="p-3">שם</th>
-                <th className="p-3 text-center">שעות חודש</th>
-                <th className="p-3 text-center">לתשלום</th>
-                <th className="p-3 text-center">סכום</th>
-                <th className="p-3 text-left">התקדמות ב-90</th>
+        </div>
+        <table className="w-full text-right content-card">
+          <thead>
+            <tr className="border-b">
+              <th className="p-4">שם</th>
+              <th className="p-4 text-center">שעות לתשלום</th>
+              <th className="p-4 text-center">סכום</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summaryRows.map(r => (
+              <tr key={r.youth.id} className="border-b">
+                <td className="p-4">{r.youth.name}</td>
+                <td className="p-4 text-center font-bold text-blue-600">{r.summary.payablePendingHours.toFixed(1)}</td>
+                <td className="p-4 text-center font-bold text-emerald-600">₪{r.summary.payablePendingAmount.toFixed(2)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {summaryRows.map(({ youth, summary }) => (
-                <tr key={youth.id} className="border-b hover:bg-slate-50">
-                  <td className="p-3 font-bold">{youth.name}</td>
-                  <td className="p-3 text-center">{summary.currentMonthHours.toFixed(1)}</td>
-                  <td className="p-3 text-center text-blue-600 font-bold">{summary.payablePendingHours.toFixed(1)}</td>
-                  <td className="p-3 text-center text-emerald-600 font-bold">₪{summary.payablePendingAmount.toFixed(2)}</td>
-                  <td className="p-3">
-                    <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-amber-400" 
-                        style={{ width: `${Math.min((summary.mandatoryCompletedHours / MANDATORY_HOURS_LIMIT) * 100, 100)}%` }}
-                      ></div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
