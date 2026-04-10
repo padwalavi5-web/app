@@ -1,1 +1,162 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --page-bg: #edf4f7;
+  --page-bg-strong: #dbe9ee;
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-border: rgba(147, 181, 189, 0.26);
+  --text-main: #15313a;
+  --text-soft: #58707a;
+  --accent: #3c7f88;
+  --accent-strong: #25545b;
+  --accent-warm: #d79465;
+  --success: #2f8c70;
+  --danger: #c86a76;
+  --shadow-soft: 0 24px 60px rgba(47, 87, 97, 0.12);
+  --shadow-card: 0 18px 40px rgba(31, 76, 86, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top right, rgba(117, 174, 188, 0.26), transparent 28%),
+    radial-gradient(circle at left 20%, rgba(215, 148, 101, 0.16), transparent 22%),
+    linear-gradient(180deg, #f5fbfd 0%, var(--page-bg) 45%, var(--page-bg-strong) 100%);
+  background-attachment: fixed;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text-main);
+  font-family: Rubik, "Segoe UI", sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen px-4 py-6 sm:px-6 sm:py-8;
+  }
+
+  .page-wrap {
+    @apply mx-auto w-full max-w-6xl;
+  }
+
+  .glass-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+    @apply rounded-[28px];
+  }
+
+  .content-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(165, 194, 201, 0.28);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(14px);
+    @apply rounded-[24px];
+  }
+
+  .page-title {
+    @apply text-3xl font-semibold tracking-tight sm:text-4xl;
+    color: var(--text-main);
+  }
+
+  .page-subtitle {
+    @apply text-sm leading-6 sm:text-base;
+    color: var(--text-soft);
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-semibold;
+    color: var(--text-main);
+  }
+
+  .field-input {
+    @apply w-full rounded-2xl border px-4 py-3 outline-none transition duration-200;
+    border-color: rgba(122, 161, 169, 0.25);
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--text-main);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .field-input:focus {
+    border-color: rgba(60, 127, 136, 0.5);
+    box-shadow: 0 0 0 4px rgba(60, 127, 136, 0.14);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold text-white transition duration-200;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    box-shadow: 0 16px 30px rgba(37, 84, 91, 0.22);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 20px 34px rgba(37, 84, 91, 0.26);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition duration-200;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(114, 151, 159, 0.26);
+    color: var(--text-main);
+  }
+
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold text-white transition duration-200;
+    background: linear-gradient(135deg, #d38b95 0%, var(--danger) 100%);
+    box-shadow: 0 16px 30px rgba(200, 106, 118, 0.2);
+  }
+
+  .btn-soft {
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition duration-200;
+    background: rgba(240, 247, 248, 0.84);
+    border: 1px solid rgba(122, 161, 169, 0.18);
+    color: var(--accent-strong);
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+    background: rgba(60, 127, 136, 0.12);
+    color: var(--accent-strong);
+    border: 1px solid rgba(60, 127, 136, 0.12);
+  }
+
+  .stat-card {
+    @apply content-card p-5;
+  }
+
+  .hero-orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(8px);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .grid-responsive {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+}
