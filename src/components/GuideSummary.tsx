@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // הוספנו חזרה
 import { 
   getRates, 
   getReports, 
@@ -13,6 +14,7 @@ const GuideSummary = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate(); // הוספנו חזרה
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -64,32 +66,44 @@ const GuideSummary = () => {
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="page-title">סיכום מדריך</h1>
-          <div className="flex gap-2">
-            <button onClick={handleExport} className="btn-secondary">📊 אקסל</button>
-            <button onClick={handleReset} className="btn-primary bg-red-600">🔄 איפוס</button>
+      <div className="page-wrap p-4 sm:p-6">
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex justify-between items-center">
+            <h1 className="page-title text-xl sm:text-2xl">סיכום מדריך</h1>
+            <div className="flex gap-2">
+              <button onClick={handleExport} className="btn-secondary text-sm">📊 אקסל</button>
+              <button onClick={handleReset} className="btn-primary bg-red-600 text-sm">🔄 איפוס</button>
+            </div>
+          </div>
+          
+          {/* כפתורי הניהול שחזרו - מותאמים לטלפון */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => navigate('/guide/youth')} className="btn-secondary flex-1 text-sm py-2">👥 ניהול נוער</button>
+            <button onClick={() => navigate('/guide/branches')} className="btn-secondary flex-1 text-sm py-2">🏢 ענפים</button>
+            <button onClick={() => navigate('/guide/rates')} className="btn-secondary flex-1 text-sm py-2">💰 תעריפים</button>
           </div>
         </div>
-        <table className="w-full text-right content-card">
-          <thead>
-            <tr className="border-b">
-              <th className="p-4">שם</th>
-              <th className="p-4 text-center">שעות לתשלום</th>
-              <th className="p-4 text-center">סכום</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaryRows.map(r => (
-              <tr key={r.youth.id} className="border-b">
-                <td className="p-4">{r.youth.name}</td>
-                <td className="p-4 text-center font-bold text-blue-600">{r.summary.payablePendingHours.toFixed(1)}</td>
-                <td className="p-4 text-center font-bold text-emerald-600">₪{r.summary.payablePendingAmount.toFixed(2)}</td>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-right content-card">
+            <thead>
+              <tr className="border-b bg-slate-50">
+                <th className="p-3 text-sm">שם</th>
+                <th className="p-3 text-center text-sm">שעות</th>
+                <th className="p-3 text-center text-sm">סכום</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {summaryRows.map(r => (
+                <tr key={r.youth.id} className="border-b last:border-0 hover:bg-slate-50">
+                  <td className="p-3 text-sm font-medium">{r.youth.name}</td>
+                  <td className="p-3 text-center font-bold text-blue-600 text-sm">{r.summary.payablePendingHours.toFixed(1)}</td>
+                  <td className="p-3 text-center font-bold text-emerald-600 text-sm">₪{r.summary.payablePendingAmount.toFixed(0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
