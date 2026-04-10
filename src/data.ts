@@ -39,16 +39,18 @@ export const getBranches = async (): Promise<Branch[]> => {
 export const saveBranch = async (branch: Branch): Promise<boolean> => {
   try {
     const normalizedBranch = normalizeBranch(branch);
-    if (!normalizedBranch.name || !normalizedBranch.password.trim()) {
-      return false;
-    }
-
+    if (!normalizedBranch.name || !normalizedBranch.password.trim()) return false;
     await setDoc(doc(db, 'branches', normalizedBranch.name), normalizedBranch);
     return true;
   } catch (error) {
     console.error(error);
     return false;
   }
+};
+
+export const updateBranchPassword = async (branchName: string, newPassword: string) => {
+  const branchRef = doc(db, 'branches', branchName);
+  await updateDoc(branchRef, { password: newPassword.trim() });
 };
 
 export const deleteBranch = async (branchName: string) => {
@@ -66,8 +68,6 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   return id;
 };
 
-// --- תעריפים (Rates) ---
-
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
   return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() } as HourlyRate));
@@ -77,20 +77,18 @@ export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
   await addDoc(collection(db, 'rates'), rate);
 };
 
-// פונקציית מחיקה שהייתה חסרה
 export const deleteRate = async (rateId: string) => {
   await deleteDoc(doc(db, 'rates', rateId));
 };
 
-// פונקציית עדכון שהייתה חסרה
 export const updateRate = async (rateId: string, updates: Partial<HourlyRate>) => {
   await updateDoc(doc(db, 'rates', rateId), updates);
 };
 
-// ------------------------
-
 export const resetPaidHours = async (youthId: string, currentTotal: number) => {
-  await updateDoc(doc(db, 'youth', youthId), { lastResetHours: currentTotal });
+  if (!youthId) return;
+  const youthRef = doc(db, 'youth', youthId);
+  await updateDoc(youthRef, { lastResetHours: Number(currentTotal) });
 };
 
 export const addReport = async (report: Omit<Report, 'id'>) => {
@@ -106,26 +104,25 @@ export const updateReport = async (reportId: string, updates: Partial<Report>) =
   await updateDoc(doc(db, 'reports', reportId), updates);
 };
 
-export const getManagers = async () => {
-  const branches = await getBranches();
-  return branches.map((branch) => ({ ...branch, role: 'manager' as const, branch: branch.name }));
-};
-
 export const calculateAge = (birthDate: string): number => {
   const birth = new Date(birthDate);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
-
-  if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  ) {
+  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) {
     age--;
   }
-
   return age;
 };
 
 export const setCurrentUser = (user: any) => localStorage.setItem('currentUser', JSON.stringify(user));
 export const getCurrentUser = () => JSON.parse(localStorage.getItem('currentUser') || 'null');
 export const logout = () => localStorage.removeItem('currentUser');
+// הוסף את זה לקובץ data.ts הקיים שלך
+export const getManagers = async (): Promise<any[]> => {
+  const branches = await getBranches();
+  // אנחנו מחזירים את הענפים בפורמט שה-Login מצפה לו (שם הענף כ-branch)
+  return branches.map(b => ({
+    branch: b.name,
+    password: b.password
+  }));
+};

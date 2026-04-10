@@ -36,10 +36,8 @@ export interface YouthWorkSummary {
   payableCumulativeHours: number;
   payablePendingHours: number;
   currentMonthHours: number;
-  currentMonthPayableHours: number;
-  currentMonthPayableAmount: number;
+  payablePendingAmount: number; // זה הסכום שיוצג בטבלה
   totalEarnedAmount: number;
-  payablePendingAmount: number;
 }
 
 export const buildYouthWorkSummary = (
@@ -61,7 +59,6 @@ export const buildYouthWorkSummary = (
   let mandatoryCompletedHours = 0;
   let payableCumulativeHours = 0;
   let currentMonthHours = 0;
-  let currentMonthPayableHours = 0;
 
   for (const report of approvedReports) {
     if (!isReportInCurrentCycle(report.date, referenceDate)) {
@@ -78,22 +75,21 @@ export const buildYouthWorkSummary = (
 
     if (isSameMonth(report.date, referenceDate)) {
       currentMonthHours += report.totalHours;
-      currentMonthPayableHours += payableHoursForReport;
     }
   }
 
   const hourlyRate = getYouthRate(youth, rates);
+  
+  // חישוב שעות שטרם שולמו (סיכום מצטבר פחות מה שכבר אופס)
   const payablePendingHours = Math.max(0, payableCumulativeHours - Number(youth.lastResetHours ?? 0));
 
   return {
     cycleApprovedHours,
     mandatoryCompletedHours,
     payableCumulativeHours,
-    payablePendingHours,
+    payablePendingHours, // זה מה שהטבלה תציג עכשיו
     currentMonthHours,
-    currentMonthPayableHours,
-    currentMonthPayableAmount: currentMonthPayableHours * hourlyRate,
-    totalEarnedAmount: payableCumulativeHours * hourlyRate,
     payablePendingAmount: payablePendingHours * hourlyRate,
+    totalEarnedAmount: payableCumulativeHours * hourlyRate,
   };
 };
