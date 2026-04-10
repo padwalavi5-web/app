@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import type { Branch, HourlyRate, Report, Youth } from './types';
 
-const normalizeBranch = (branchDoc: Partial<Branch>, id?: string): Branch => ({
+const normalizeBranch = (branchDoc: any, id?: string): Branch => ({
   name: String(branchDoc?.name ?? id ?? '').trim(),
   password: String(branchDoc?.password ?? ''),
 });
@@ -36,6 +36,12 @@ export const getBranches = async (): Promise<Branch[]> => {
     .filter((branch) => branch.name);
 };
 
+// הוספת export ושימוש ב-getBranches
+export const getManagers = async (): Promise<any[]> => {
+  const branches = await getBranches();
+  return branches.map(b => ({ branch: b.name, password: b.password }));
+};
+
 export const saveBranch = async (branch: Branch): Promise<boolean> => {
   try {
     const normalizedBranch = normalizeBranch(branch);
@@ -57,6 +63,17 @@ export const deleteBranch = async (branchName: string) => {
   await deleteDoc(doc(db, 'branches', branchName));
 };
 
+export const updateGuidePassword = async (newPassword: string) => {
+  const guideSettingsRef = doc(db, 'config', 'guideSettings');
+  await setDoc(guideSettingsRef, { password: newPassword.trim() }, { merge: true });
+};
+
+export const getGuidePassword = async (): Promise<string> => {
+  const querySnapshot = await getDocs(collection(db, 'config'));
+  const guideDoc = querySnapshot.docs.find(d => d.id === 'guideSettings');
+  return guideDoc?.data()?.password || 'admin';
+};
+
 export const getYouth = async (): Promise<Youth[]> => {
   const querySnapshot = await getDocs(collection(db, 'youth'));
   return querySnapshot.docs.map((youthDoc) => ({ id: youthDoc.id, ...youthDoc.data() } as Youth));
@@ -66,6 +83,11 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   const id = `${String(youth.name).trim()}_${String(youth.personalBudgetNumber).trim()}`;
   await setDoc(doc(db, 'youth', id), { ...youth, id, totalHours: 0, lastResetHours: 0 });
   return id;
+};
+
+export const resetPaidHours = async (youthId: string, currentTotal: number) => {
+  const youthRef = doc(db, 'youth', youthId);
+  await updateDoc(youthRef, { lastResetHours: Number(currentTotal) });
 };
 
 export const getRates = async (): Promise<HourlyRate[]> => {
@@ -83,12 +105,6 @@ export const deleteRate = async (rateId: string) => {
 
 export const updateRate = async (rateId: string, updates: Partial<HourlyRate>) => {
   await updateDoc(doc(db, 'rates', rateId), updates);
-};
-
-export const resetPaidHours = async (youthId: string, currentTotal: number) => {
-  if (!youthId) return;
-  const youthRef = doc(db, 'youth', youthId);
-  await updateDoc(youthRef, { lastResetHours: Number(currentTotal) });
 };
 
 export const addReport = async (report: Omit<Report, 'id'>) => {
@@ -117,12 +133,3 @@ export const calculateAge = (birthDate: string): number => {
 export const setCurrentUser = (user: any) => localStorage.setItem('currentUser', JSON.stringify(user));
 export const getCurrentUser = () => JSON.parse(localStorage.getItem('currentUser') || 'null');
 export const logout = () => localStorage.removeItem('currentUser');
-// הוסף את זה לקובץ data.ts הקיים שלך
-export const getManagers = async (): Promise<any[]> => {
-  const branches = await getBranches();
-  // אנחנו מחזירים את הענפים בפורמט שה-Login מצפה לו (שם הענף כ-branch)
-  return branches.map(b => ({
-    branch: b.name,
-    password: b.password
-  }));
-};
