@@ -5,6 +5,12 @@ import type { Branch, Role } from '../types';
 
 type YouthAuthMode = 'login' | 'register';
 
+const roleLabels: Record<Role, string> = {
+  youth: 'נוער',
+  manager: 'מנהל ענף',
+  guide: 'מדריך',
+};
+
 const Login = () => {
   const [role, setRole] = useState<Role>('youth');
   const [youthMode, setYouthMode] = useState<YouthAuthMode>('login');
@@ -126,145 +132,173 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-right" dir="rtl">
-      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border">
-        <h1 className="text-3xl font-bold text-center mb-8 text-blue-600">כניסה למערכת</h1>
+    <div className="app-shell flex items-center" dir="rtl">
+      <div className="page-wrap relative">
+        <div className="hero-orb right-0 top-4 h-28 w-28 bg-[rgba(108,168,180,0.32)] sm:h-40 sm:w-40" />
+        <div className="hero-orb bottom-16 left-2 h-24 w-24 bg-[rgba(223,169,126,0.24)] sm:h-36 sm:w-36" />
 
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          {(['youth', 'manager', 'guide'] as Role[]).map((itemRole) => (
-            <button
-              key={itemRole}
-              onClick={() => setRole(itemRole)}
-              className={`p-3 rounded-xl border-2 ${
-                role === itemRole ? 'border-blue-500 bg-blue-50' : 'border-gray-100'
-              }`}
-            >
-              <span className="text-xs font-bold block">
-                {itemRole === 'youth' ? 'נוער' : itemRole === 'manager' ? 'מנהל ענף' : 'מדריך'}
-              </span>
-            </button>
-          ))}
-        </div>
+        <div className="grid items-center gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="glass-panel relative overflow-hidden p-6 sm:p-8 lg:p-10">
+            <div className="chip mb-4">מערכת דיווח עבודה</div>
+            <h1 className="page-title mb-4">ניהול שעות עבודה עם חוויית שימוש נקייה ומהירה</h1>
+            <p className="page-subtitle mb-8 max-w-xl">
+              מסך כניסה ממורכז, נעים ומדויק שמותאם לעבודה יומיומית של נוער, מנהלי ענפים ומדריכים בכל גודל מסך.
+            </p>
 
-        {role === 'youth' && (
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <button
-              onClick={() => {
-                setYouthMode('login');
-                setBirthDate('');
-              }}
-              className={`p-3 rounded-xl border ${
-                youthMode === 'login' ? 'border-blue-500 bg-blue-50 font-bold' : 'border-gray-200'
-              }`}
-            >
-              התחברות
-            </button>
-            <button
-              onClick={() => {
-                setYouthMode('register');
-                resetYouthFields();
-              }}
-              className={`p-3 rounded-xl border ${
-                youthMode === 'register' ? 'border-blue-500 bg-blue-50 font-bold' : 'border-gray-200'
-              }`}
-            >
-              הרשמה
-            </button>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {(role === 'youth' || role === 'manager') && (
-            <div>
-              <label htmlFor="user-name" className="block text-sm mb-1 font-bold">
-                שם מלא:
-              </label>
-              <input
-                id="user-name"
-                name="name"
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="w-full p-3 border rounded-xl"
-              />
-            </div>
-          )}
-
-          {role === 'youth' && (
-            <>
-              <div>
-                <label htmlFor="budget-num" className="block text-sm mb-1 font-bold">
-                  מספר תקציב אישי:
-                </label>
-                <input
-                  id="budget-num"
-                  name="budget"
-                  type="text"
-                  value={budgetNumber}
-                  onChange={(event) => setBudgetNumber(event.target.value)}
-                  className="w-full p-3 border rounded-xl"
-                />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="stat-card">
+                <div className="chip mb-3">חכם</div>
+                <div className="text-lg font-semibold">מעברים ברורים</div>
+                <p className="page-subtitle mt-2">בחירה מדויקת בין התחברות, הרשמה ואזורי ניהול.</p>
               </div>
+              <div className="stat-card">
+                <div className="chip mb-3">מהיר</div>
+                <div className="text-lg font-semibold">מותאם למובייל</div>
+                <p className="page-subtitle mt-2">כרטיסים ממורכזים, כפתורים גדולים ופריסה נוחה גם בטלפון.</p>
+              </div>
+              <div className="stat-card">
+                <div className="chip mb-3">חי</div>
+                <div className="text-lg font-semibold">מתעדכן טוב יותר</div>
+                <p className="page-subtitle mt-2">הכנה טובה יותר לעבודה עם PWA ופריסות חדשות.</p>
+              </div>
+            </div>
+          </section>
 
-              {youthMode === 'register' && (
+          <section className="content-card p-6 sm:p-8">
+            <div className="mb-6 text-center">
+              <div className="chip mb-3">כניסה מאובטחת</div>
+              <h2 className="page-title text-[2rem] sm:text-[2.25rem]">כניסה למערכת</h2>
+            </div>
+
+            <div className="mb-5 grid grid-cols-3 gap-2">
+              {(['youth', 'manager', 'guide'] as Role[]).map((itemRole) => (
+                <button
+                  key={itemRole}
+                  onClick={() => setRole(itemRole)}
+                  className={role === itemRole ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+                >
+                  {roleLabels[itemRole]}
+                </button>
+              ))}
+            </div>
+
+            {role === 'youth' && (
+              <div className="mb-5 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setYouthMode('login');
+                    setBirthDate('');
+                  }}
+                  className={youthMode === 'login' ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+                >
+                  התחברות
+                </button>
+                <button
+                  onClick={() => {
+                    setYouthMode('register');
+                    resetYouthFields();
+                  }}
+                  className={youthMode === 'register' ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+                >
+                  הרשמה
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {(role === 'youth' || role === 'manager') && (
                 <div>
-                  <label htmlFor="birth" className="block text-sm mb-1 font-bold">
-                    תאריך לידה:
+                  <label htmlFor="user-name" className="field-label">
+                    שם מלא
                   </label>
                   <input
-                    id="birth"
-                    name="birthDate"
-                    type="date"
-                    value={birthDate}
-                    onChange={(event) => setBirthDate(event.target.value)}
-                    className="w-full p-3 border rounded-xl"
+                    id="user-name"
+                    name="name"
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className="field-input"
                   />
                 </div>
               )}
-            </>
-          )}
 
-          {role === 'manager' && (
-            <div>
-              <label htmlFor="branch-sel" className="block text-sm mb-1 font-bold">
-                ענף:
-              </label>
-              <select
-                id="branch-sel"
-                name="branch"
-                value={branch}
-                onChange={(event) => setBranch(event.target.value)}
-                className="w-full p-3 border rounded-xl"
-              >
-                <option value="">בחר ענף</option>
-                {branches.map((itemBranch) => (
-                  <option key={itemBranch.name} value={itemBranch.name}>
-                    {itemBranch.name}
-                  </option>
-                ))}
-              </select>
+              {role === 'youth' && (
+                <>
+                  <div>
+                    <label htmlFor="budget-num" className="field-label">
+                      מספר תקציב אישי
+                    </label>
+                    <input
+                      id="budget-num"
+                      name="budget"
+                      type="text"
+                      value={budgetNumber}
+                      onChange={(event) => setBudgetNumber(event.target.value)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  {youthMode === 'register' && (
+                    <div>
+                      <label htmlFor="birth" className="field-label">
+                        תאריך לידה
+                      </label>
+                      <input
+                        id="birth"
+                        name="birthDate"
+                        type="date"
+                        value={birthDate}
+                        onChange={(event) => setBirthDate(event.target.value)}
+                        className="field-input"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {role === 'manager' && (
+                <div>
+                  <label htmlFor="branch-sel" className="field-label">
+                    ענף
+                  </label>
+                  <select
+                    id="branch-sel"
+                    name="branch"
+                    value={branch}
+                    onChange={(event) => setBranch(event.target.value)}
+                    className="field-input"
+                  >
+                    <option value="">בחר ענף</option>
+                    {branches.map((itemBranch) => (
+                      <option key={itemBranch.name} value={itemBranch.name}>
+                        {itemBranch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(role === 'manager' || role === 'guide') && (
+                <div>
+                  <label htmlFor="pwd" className="field-label">
+                    סיסמה
+                  </label>
+                  <input
+                    id="pwd"
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="field-input"
+                  />
+                </div>
+              )}
+
+              <button onClick={handleLogin} className="btn-primary w-full">
+                {role === 'youth' && youthMode === 'register' ? 'הרשמה' : 'התחברות'}
+              </button>
             </div>
-          )}
-
-          {(role === 'manager' || role === 'guide') && (
-            <div>
-              <label htmlFor="pwd" className="block text-sm mb-1 font-bold">
-                סיסמה:
-              </label>
-              <input
-                id="pwd"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full p-3 border rounded-xl"
-              />
-            </div>
-          )}
-
-          <button onClick={handleLogin} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">
-            {role === 'youth' && youthMode === 'register' ? 'הרשמה' : 'התחברות'}
-          </button>
+          </section>
         </div>
       </div>
     </div>
