@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRates, addRate } from '../data';
+import { addRate, getRates } from '../data';
 import type { HourlyRate } from '../types';
 
-const ManagerRates = () => {
+const ManageRates = () => {
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [newRate, setNewRate] = useState({ age: '', rate: '' });
   const navigate = useNavigate();
@@ -13,44 +13,103 @@ const ManagerRates = () => {
     setRates(data);
   };
 
-  useEffect(() => { loadRates(); }, []);
+  useEffect(() => {
+    loadRates();
+  }, []);
 
   const handleAdd = async () => {
-    if (!newRate.age || !newRate.rate) return;
-    
-    // תיקון שגיאת ה-Property 'id' is missing
-    const rateData = {
-      age: parseInt(newRate.age),
-      rate: parseFloat(newRate.rate)
-    };
-    
-    await addRate(rateData);
+    if (!newRate.age || !newRate.rate) {
+      return;
+    }
+
+    await addRate({
+      age: parseInt(newRate.age, 10),
+      rate: parseFloat(newRate.rate),
+    });
+
     setNewRate({ age: '', rate: '' });
     loadRates();
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto text-right" dir="rtl">
-      <button onClick={() => navigate('/guide')} className="mb-4 text-blue-600 font-bold underline">חזור</button>
-      <h1 className="text-2xl font-bold mb-6 text-orange-600">ניהול תעריפי שכר</h1>
-      <div className="bg-white p-4 shadow rounded-xl mb-6 border">
-        <label htmlFor="age-rate-input" className="block mb-1">גיל:</label>
-        <input id="age-rate-input" type="number" placeholder="גיל (למשל: 16)" className="w-full border p-2 mb-2 rounded" value={newRate.age} onChange={e => setNewRate({...newRate, age: e.target.value})} />
-        <label htmlFor="price-rate-input" className="block mb-1">תעריף:</label>
-        <input id="price-rate-input" type="number" placeholder="תעריף לשעה (₪)" className="w-full border p-2 mb-4 rounded" value={newRate.rate} onChange={e => setNewRate({...newRate, rate: e.target.value})} />
-        <button onClick={handleAdd} className="w-full bg-orange-500 text-white p-2 rounded-lg font-bold shadow-md active:bg-orange-600">הוסף תעריף</button>
-      </div>
-      <div className="space-y-2">
-        <h2 className="font-bold border-b pb-1">תעריפים רשומים:</h2>
-        {rates.length === 0 ? <p className="text-gray-400">אין תעריפים כרגע</p> : rates.map(r => (
-          <div key={r.id} className="flex justify-between p-3 bg-gray-50 rounded border shadow-sm">
-            <div className="font-bold text-orange-700">₪{r.rate} לשעה</div>
-            <div>גיל: {r.age}</div>
+    <div className="app-shell" dir="rtl">
+      <div className="page-wrap max-w-5xl space-y-6">
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="chip mb-3">תמחור</div>
+              <h1 className="page-title mb-2">ניהול תעריפי שכר</h1>
+              <p className="page-subtitle">עדכון תעריפים לפי גיל מתוך ממשק מרוכז ונעים לעבודה.</p>
+            </div>
+            <button onClick={() => navigate('/guide')} className="btn-secondary">
+              חזור לסיכום
+            </button>
           </div>
-        ))}
+
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="content-card p-5 sm:p-6">
+              <div className="mb-4">
+                <div className="chip mb-3">תעריף חדש</div>
+                <h2 className="text-2xl font-semibold">הוספת תעריף</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="age-rate-input" className="field-label">
+                    גיל
+                  </label>
+                  <input
+                    id="age-rate-input"
+                    type="number"
+                    placeholder="למשל 16"
+                    className="field-input"
+                    value={newRate.age}
+                    onChange={(event) => setNewRate({ ...newRate, age: event.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="price-rate-input" className="field-label">
+                    תעריף לשעה
+                  </label>
+                  <input
+                    id="price-rate-input"
+                    type="number"
+                    placeholder="למשל 35"
+                    className="field-input"
+                    value={newRate.rate}
+                    onChange={(event) => setNewRate({ ...newRate, rate: event.target.value })}
+                  />
+                </div>
+
+                <button onClick={handleAdd} className="btn-primary w-full">
+                  הוסף תעריף
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {rates.length === 0 ? (
+                <div className="content-card p-6">
+                  <p className="page-subtitle">אין תעריפים כרגע.</p>
+                </div>
+              ) : (
+                rates.map((rate) => (
+                  <div key={rate.id} className="content-card p-5">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="text-xl font-semibold">₪{rate.rate}</div>
+                      <div className="chip">גיל {rate.age}</div>
+                    </div>
+                    <div className="page-subtitle">תעריף קבוע לשעה עבור גיל זה.</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 };
 
-export default ManagerRates;
+export default ManageRates;

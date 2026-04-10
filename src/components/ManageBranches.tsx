@@ -70,89 +70,119 @@ const ManageBranches = () => {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto text-right" dir="rtl">
-      <button onClick={() => navigate('/guide')} className="mb-4 text-blue-600 font-bold underline">
-        חזור
-      </button>
-
-      <h1 className="text-2xl font-bold mb-6 text-purple-700">ניהול ענפים</h1>
-
-      <div className="bg-white p-4 shadow-lg rounded-xl mb-6 border border-purple-100">
-        <input
-          id="b-name"
-          name="b-name"
-          placeholder="שם הענף"
-          className="w-full border p-2 mb-2 rounded text-right"
-          value={newBranch.name}
-          onChange={(event) => setNewBranch({ ...newBranch, name: event.target.value })}
-        />
-        <input
-          id="b-pass"
-          name="b-pass"
-          type="password"
-          placeholder="סיסמת מנהל הענף"
-          className="w-full border p-2 mb-4 rounded text-right"
-          value={newBranch.password}
-          onChange={(event) => setNewBranch({ ...newBranch, password: event.target.value })}
-        />
-        <button onClick={handleAdd} className="w-full bg-purple-600 text-white p-2 rounded-lg font-bold">
-          שמור ענף
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {branches.map((branch) => (
-          <div key={branch.name} className="p-3 bg-gray-50 rounded-lg border">
-            <div className="font-bold mb-3">{branch.name}</div>
-
-            {editingBranchName === branch.name ? (
-              <div className="space-y-2">
-                <input
-                  type="password"
-                  className="w-full border p-2 rounded text-right"
-                  value={editingPassword}
-                  onChange={(event) => setEditingPassword(event.target.value)}
-                  placeholder="סיסמה חדשה"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleSavePassword(branch.name)}
-                    className="flex-1 bg-purple-600 text-white p-2 rounded-lg font-bold"
-                  >
-                    שמור סיסמה
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingBranchName(null);
-                      setEditingPassword('');
-                    }}
-                    className="flex-1 bg-gray-200 p-2 rounded-lg"
-                  >
-                    ביטול
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleStartEdit(branch)}
-                  className="flex-1 bg-blue-50 text-blue-700 p-2 rounded-lg font-bold"
-                >
-                  שינוי סיסמה
-                </button>
-                <button
-                  onClick={async () => {
-                    await deleteBranch(branch.name);
-                    await fetchBranches();
-                  }}
-                  className="flex-1 bg-red-50 text-red-600 p-2 rounded-lg font-bold"
-                >
-                  מחק
-                </button>
-              </div>
-            )}
+    <div className="app-shell" dir="rtl">
+      <div className="page-wrap max-w-5xl space-y-6">
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="chip mb-3">ניהול הרשאות</div>
+              <h1 className="page-title mb-2">ניהול ענפים</h1>
+              <p className="page-subtitle">יצירת ענפים חדשים, שינוי סיסמאות מנהלים וניהול מסודר מתוך מסך אחד.</p>
+            </div>
+            <button onClick={() => navigate('/guide')} className="btn-secondary">
+              חזור לסיכום
+            </button>
           </div>
-        ))}
+
+          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="content-card p-5 sm:p-6">
+              <div className="mb-4">
+                <div className="chip mb-3">ענף חדש</div>
+                <h2 className="text-2xl font-semibold">הוספת ענף</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="b-name" className="field-label">
+                    שם הענף
+                  </label>
+                  <input
+                    id="b-name"
+                    name="b-name"
+                    placeholder="למשל: רפת"
+                    className="field-input"
+                    value={newBranch.name}
+                    onChange={(event) => setNewBranch({ ...newBranch, name: event.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="b-pass" className="field-label">
+                    סיסמת מנהל הענף
+                  </label>
+                  <input
+                    id="b-pass"
+                    name="b-pass"
+                    type="password"
+                    placeholder="הגדר סיסמה"
+                    className="field-input"
+                    value={newBranch.password}
+                    onChange={(event) => setNewBranch({ ...newBranch, password: event.target.value })}
+                  />
+                </div>
+
+                <button onClick={handleAdd} className="btn-primary w-full">
+                  שמור ענף
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {branches.map((branch) => (
+                <div key={branch.name} className="content-card p-5">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xl font-semibold">{branch.name}</div>
+                      <div className="page-subtitle">מנהל ענף פעיל במערכת</div>
+                    </div>
+                    <div className="chip">ענף</div>
+                  </div>
+
+                  {editingBranchName === branch.name ? (
+                    <div className="space-y-3">
+                      <input
+                        type="password"
+                        className="field-input"
+                        value={editingPassword}
+                        onChange={(event) => setEditingPassword(event.target.value)}
+                        placeholder="סיסמה חדשה"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleSavePassword(branch.name)} className="btn-primary flex-1">
+                          שמור סיסמה
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingBranchName(null);
+                            setEditingPassword('');
+                          }}
+                          className="btn-secondary flex-1"
+                        >
+                          ביטול
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleStartEdit(branch)} className="btn-secondary flex-1">
+                        שינוי סיסמה
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await deleteBranch(branch.name);
+                          await fetchBranches();
+                        }}
+                        className="btn-danger flex-1"
+                      >
+                        מחק
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
