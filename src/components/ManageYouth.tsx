@@ -1,54 +1,58 @@
-import { useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
-import { calculateAge, getCurrentUser } from '../data';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { FiArrowRight, FiClock, FiEdit3, FiSave, FiTrash2, FiUser } from 'react-icons/fi';
+import { calculateAge, getCurrentUser, getRates, getReports, getYouth, updateYouth } from '../data';
 import { db } from '../firebase';
-import type { Youth } from '../types';
+import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
+import { buildYouthWorkSummary } from '../workSummary';
 
 const ManageYouth = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [youth, setYouth] = useState<Youth[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [rates, setRates] = useState<HourlyRate[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Youth>>({});
   const navigate = useNavigate();
 
-  const fetchYouth = async () => {
+  const fetchYouthData = useCallback(async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'youth'));
-      const youthData = querySnapshot.docs.map(
-        (youthDoc) =>
-          ({
-            id: youthDoc.id,
-            ...youthDoc.data(),
-          }) as Youth,
-      );
+      const [youthData, reportData, rateData] = await Promise.all([getYouth(), getReports(), getRates()]);
       setYouth(youthData);
+      setReports(reportData);
+      setRates(rateData);
     } catch (error) {
       console.error('Error fetching youth:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      const currentUser = getCurrentUser();
-      if (!currentUser || currentUser.role !== 'guide') {
-        navigate('/');
-        return;
-      }
-      setUser(currentUser);
-      await fetchYouth();
-    };
-    loadData();
-  }, [navigate]);
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== 'guide') {
+      navigate('/');
+      return;
+    }
+
+    setUser(currentUser);
+    void fetchYouthData();
+  }, [fetchYouthData, navigate]);
+
+  const summaryById = useMemo(
+    () => new Map(youth.map((item) => [item.id, buildYouthWorkSummary(item, reports, rates)])),
+    [reports, rates, youth],
+  );
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('האם למחוק את הנער מהרשימה?')) {
-      try {
-        await deleteDoc(doc(db, 'youth', id));
-        await fetchYouth();
-      } catch (error) {
-        console.error('Error deleting youth:', error);
-      }
+    if (!window.confirm('למחוק את הנער מהרשימה?')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'youth', id));
+      await fetchYouthData();
+    } catch (error) {
+      console.error('Error deleting youth:', error);
     }
   };
 
@@ -63,13 +67,13 @@ const ManageYouth = () => {
     }
 
     try {
-      const youthRef = doc(db, 'youth', editingId);
-      await updateDoc(youthRef, {
+      await updateYouth(editingId, {
         name: editFormData.name,
         birthDate: editFormData.birthDate,
         personalBudgetNumber: editFormData.personalBudgetNumber,
+        manualHoursAdjustment: Number(editFormData.manualHoursAdjustment ?? 0),
       });
-      await fetchYouth();
+      await fetchYouthData();
       setEditingId(null);
       setEditFormData({});
     } catch (error) {
@@ -83,97 +87,131 @@ const ManageYouth = () => {
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-5xl space-y-6">
+      <div className="page-wrap max-w-6xl space-y-6">
         <section className="glass-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="chip mb-3">ניהול משתמשים</div>
-              <h1 className="page-title mb-2">ניהול נוער</h1>
-              <p className="page-subtitle">עריכה מהירה של פרטי נערים, תצוגת שעות כוללת ופעולות ישירות מתוך הכרטיס.</p>
+              <div className="chip mb-3">ניהול נוער</div>
+              <h1 className="page-title mb-2">עריכת נוער ושעות ידניות</h1>
+              <p className="page-subtitle">אפשר לעדכן פרטים, לשנות מספר תקציב, וגם להוסיף תיקון ידני לכמות השעות של כל ילד.</p>
             </div>
-            <button onClick={() => navigate('/guide')} className="btn-secondary">
+            <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+              <FiArrowRight size={18} />
               חזור לסיכום
             </button>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {youth.map((youthItem) => (
-              <div key={youthItem.id} className="content-card p-5">
-                {editingId === youthItem.id ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor={`name-${youthItem.id}`} className="field-label">
-                        שם מלא
-                      </label>
-                      <input
-                        id={`name-${youthItem.id}`}
-                        className="field-input"
-                        value={editFormData.name || ''}
-                        onChange={(event) => setEditFormData({ ...editFormData, name: event.target.value })}
-                      />
-                    </div>
+            {youth.map((youthItem) => {
+              const summary = summaryById.get(youthItem.id);
 
-                    <div>
-                      <label htmlFor={`date-${youthItem.id}`} className="field-label">
-                        תאריך לידה
-                      </label>
-                      <input
-                        id={`date-${youthItem.id}`}
-                        className="field-input"
-                        type="date"
-                        value={editFormData.birthDate || ''}
-                        onChange={(event) => setEditFormData({ ...editFormData, birthDate: event.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor={`budget-${youthItem.id}`} className="field-label">
-                        מספר תקציב
-                      </label>
-                      <input
-                        id={`budget-${youthItem.id}`}
-                        className="field-input"
-                        type="text"
-                        value={editFormData.personalBudgetNumber || ''}
-                        onChange={(event) =>
-                          setEditFormData({ ...editFormData, personalBudgetNumber: event.target.value })
-                        }
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button onClick={handleSaveEdit} className="btn-primary flex-1">
-                        שמור
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="btn-secondary flex-1">
-                        ביטול
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4 flex items-start justify-between gap-4">
+              return (
+                <div key={youthItem.id} className="content-card p-5">
+                  {editingId === youthItem.id ? (
+                    <div className="space-y-4">
                       <div>
-                        <h3 className="text-xl font-semibold">{youthItem.name}</h3>
-                        <p className="page-subtitle">
-                          גיל: {calculateAge(youthItem.birthDate)} | תקציב: {youthItem.personalBudgetNumber}
-                        </p>
+                        <label htmlFor={`name-${youthItem.id}`} className="field-label">שם מלא</label>
+                        <input
+                          id={`name-${youthItem.id}`}
+                          className="field-input"
+                          value={editFormData.name || ''}
+                          onChange={(event) => setEditFormData({ ...editFormData, name: event.target.value })}
+                        />
                       </div>
-                      <div className="chip">{youthItem.totalHours?.toFixed(1) || 0} שעות</div>
-                    </div>
 
-                    <div className="flex gap-2">
-                      <button onClick={() => startEdit(youthItem)} className="btn-secondary flex-1">
-                        ערוך
-                      </button>
-                      <button onClick={() => handleDelete(youthItem.id)} className="btn-danger flex-1">
-                        מחק
-                      </button>
+                      <div>
+                        <label htmlFor={`date-${youthItem.id}`} className="field-label">תאריך לידה</label>
+                        <input
+                          id={`date-${youthItem.id}`}
+                          className="field-input"
+                          type="date"
+                          value={editFormData.birthDate || ''}
+                          onChange={(event) => setEditFormData({ ...editFormData, birthDate: event.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor={`budget-${youthItem.id}`} className="field-label">מספר תקציב</label>
+                        <input
+                          id={`budget-${youthItem.id}`}
+                          className="field-input"
+                          type="text"
+                          value={editFormData.personalBudgetNumber || ''}
+                          onChange={(event) => setEditFormData({ ...editFormData, personalBudgetNumber: event.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">תיקון ידני לשעות</label>
+                        <input
+                          id={`manual-hours-${youthItem.id}`}
+                          className="field-input"
+                          type="number"
+                          step="0.5"
+                          value={String(editFormData.manualHoursAdjustment ?? 0)}
+                          onChange={(event) =>
+                            setEditFormData({ ...editFormData, manualHoursAdjustment: Number(event.target.value) })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button type="button" onClick={handleSaveEdit} className="btn-primary flex-1">
+                          <FiSave size={16} />
+                          שמור
+                        </button>
+                        <button type="button" onClick={() => setEditingId(null)} className="btn-secondary flex-1">
+                          ביטול
+                        </button>
+                      </div>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <>
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <div>
+                          <div className="chip mb-3">
+                            <FiUser size={12} />
+                            פרופיל נער
+                          </div>
+                          <h3 className="text-xl font-semibold">{youthItem.name}</h3>
+                          <p className="page-subtitle">גיל {calculateAge(youthItem.birthDate)} | תקציב {youthItem.personalBudgetNumber}</p>
+                        </div>
+                        <div className="chip chip-warm">
+                          <FiClock size={12} />
+                          {summary?.payablePendingHours.toFixed(1) ?? '0.0'} שעות לתשלום
+                        </div>
+                      </div>
+
+                      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                          <div className="text-xs text-slate-500">שעות במחזור</div>
+                          <div className="mt-2 text-xl font-semibold">{summary?.cycleApprovedHours.toFixed(1) ?? '0.0'}</div>
+                        </div>
+                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                          <div className="text-xs text-slate-500">תיקון ידני</div>
+                          <div className="mt-2 text-xl font-semibold">{Number(youthItem.manualHoursAdjustment ?? 0).toFixed(1)}</div>
+                        </div>
+                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                          <div className="text-xs text-slate-500">שעות חובה</div>
+                          <div className="mt-2 text-xl font-semibold">{summary?.mandatoryCompletedHours.toFixed(1) ?? '0.0'}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => startEdit(youthItem)} className="btn-secondary flex-1">
+                          <FiEdit3 size={16} />
+                          ערוך
+                        </button>
+                        <button type="button" onClick={() => void handleDelete(youthItem.id)} className="btn-danger flex-1">
+                          <FiTrash2 size={16} />
+                          מחק
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>

@@ -1,21 +1,41 @@
-import { db } from './firebase';
-import {
+﻿import {
   addDoc,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import type { Branch, HourlyRate, Report, Youth } from './types';
+import type { DocumentData } from 'firebase/firestore';
+import { db } from './firebase';
+import type {
+  Branch,
+  CurrentUser,
+  HourlyRate,
+  ManagerCredential,
+  Report,
+  Youth,
+} from './types';
 
-const normalizeBranch = (branchDoc: any, id?: string): Branch => ({
+const normalizeBranch = (branchDoc: DocumentData | undefined, id?: string): Branch => ({
   name: String(branchDoc?.name ?? id ?? '').trim(),
-  password: String(branchDoc?.password ?? ''),
+  password: String(branchDoc?.password ?? '').trim(),
 });
 
-const normalizeReport = (reportDoc: any, id: string): Report => ({
+const normalizeYouth = (youthDoc: DocumentData | undefined, id: string): Youth => ({
+  id,
+  name: String(youthDoc?.name ?? '').trim(),
+  birthDate: String(youthDoc?.birthDate ?? ''),
+  personalBudgetNumber: String(youthDoc?.personalBudgetNumber ?? '').trim(),
+  totalHours: Number(youthDoc?.totalHours ?? 0),
+  lastResetHours: Number(youthDoc?.lastResetHours ?? 0),
+  manualHoursAdjustment: Number(youthDoc?.manualHoursAdjustment ?? 0),
+  budget: youthDoc?.budget === undefined ? undefined : Number(youthDoc.budget),
+});
+
+const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Report => ({
   id,
   youthId: String(reportDoc?.youthId ?? ''),
   youthName: String(reportDoc?.youthName ?? ''),
@@ -26,7 +46,8 @@ const normalizeReport = (reportDoc: any, id: string): Report => ({
   endTime: String(reportDoc?.endTime ?? ''),
   totalHours: Number(reportDoc?.totalHours ?? 0),
   approvalTarget: reportDoc?.approvalTarget === 'guide' ? 'guide' : 'manager',
-  status: reportDoc?.status ?? 'pending',
+  status: reportDoc?.status === 'approved' || reportDoc?.status === 'rejected' ? reportDoc.status : 'pending',
+  reviewNote: String(reportDoc?.reviewNote ?? ''),
 });
 
 export const getBranches = async (): Promise<Branch[]> => {
@@ -36,16 +57,18 @@ export const getBranches = async (): Promise<Branch[]> => {
     .filter((branch) => branch.name);
 };
 
-// הוספת export ושימוש ב-getBranches
-export const getManagers = async (): Promise<any[]> => {
+export const getManagers = async (): Promise<ManagerCredential[]> => {
   const branches = await getBranches();
-  return branches.map(b => ({ branch: b.name, password: b.password }));
+  return branches.map((branch) => ({ branch: branch.name, password: branch.password }));
 };
 
 export const saveBranch = async (branch: Branch): Promise<boolean> => {
   try {
     const normalizedBranch = normalizeBranch(branch);
-    if (!normalizedBranch.name || !normalizedBranch.password.trim()) return false;
+    if (!normalizedBranch.name || !normalizedBranch.password) {
+      return false;
+    }
+
     await setDoc(doc(db, 'branches', normalizedBranch.name), normalizedBranch);
     return true;
   } catch (error) {
@@ -55,8 +78,7 @@ export const saveBranch = async (branch: Branch): Promise<boolean> => {
 };
 
 export const updateBranchPassword = async (branchName: string, newPassword: string) => {
-  const branchRef = doc(db, 'branches', branchName);
-  await updateDoc(branchRef, { password: newPassword.trim() });
+  await updateDoc(doc(db, 'branches', branchName), { password: newPassword.trim() });
 };
 
 export const deleteBranch = async (branchName: string) => {
@@ -64,35 +86,42 @@ export const deleteBranch = async (branchName: string) => {
 };
 
 export const updateGuidePassword = async (newPassword: string) => {
-  const guideSettingsRef = doc(db, 'config', 'guideSettings');
-  await setDoc(guideSettingsRef, { password: newPassword.trim() }, { merge: true });
+  await setDoc(doc(db, 'config', 'guideSettings'), { password: newPassword.trim() }, { merge: true });
 };
 
 export const getGuidePassword = async (): Promise<string> => {
-  const querySnapshot = await getDocs(collection(db, 'config'));
-  const guideDoc = querySnapshot.docs.find(d => d.id === 'guideSettings');
-  return guideDoc?.data()?.password || 'admin';
+  const guideDoc = await getDoc(doc(db, 'config', 'guideSettings'));
+  return String(guideDoc.data()?.password ?? 'admin');
 };
 
 export const getYouth = async (): Promise<Youth[]> => {
   const querySnapshot = await getDocs(collection(db, 'youth'));
-  return querySnapshot.docs.map((youthDoc) => ({ id: youthDoc.id, ...youthDoc.data() } as Youth));
+  return querySnapshot.docs.map((youthDoc) => normalizeYouth(youthDoc.data(), youthDoc.id));
 };
 
 export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   const id = `${String(youth.name).trim()}_${String(youth.personalBudgetNumber).trim()}`;
-  await setDoc(doc(db, 'youth', id), { ...youth, id, totalHours: 0, lastResetHours: 0 });
+  await setDoc(doc(db, 'youth', id), {
+    ...youth,
+    id,
+    totalHours: Number(youth.totalHours ?? 0),
+    lastResetHours: Number(youth.lastResetHours ?? 0),
+    manualHoursAdjustment: Number(youth.manualHoursAdjustment ?? 0),
+  });
   return id;
 };
 
+export const updateYouth = async (youthId: string, updates: Partial<Youth>) => {
+  await updateDoc(doc(db, 'youth', youthId), updates);
+};
+
 export const resetPaidHours = async (youthId: string, currentTotal: number) => {
-  const youthRef = doc(db, 'youth', youthId);
-  await updateDoc(youthRef, { lastResetHours: Number(currentTotal) });
+  await updateDoc(doc(db, 'youth', youthId), { lastResetHours: Number(currentTotal) });
 };
 
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
-  return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() } as HourlyRate));
+  return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() }) as HourlyRate);
 };
 
 export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
@@ -124,12 +153,30 @@ export const calculateAge = (birthDate: string): number => {
   const birth = new Date(birthDate);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
-  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) {
-    age--;
+
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) {
+    age -= 1;
   }
+
   return age;
 };
 
-export const setCurrentUser = (user: any) => localStorage.setItem('currentUser', JSON.stringify(user));
-export const getCurrentUser = () => JSON.parse(localStorage.getItem('currentUser') || 'null');
-export const logout = () => localStorage.removeItem('currentUser');
+export const setCurrentUser = (user: CurrentUser) => {
+  localStorage.setItem('currentUser', JSON.stringify(user));
+};
+
+export const getCurrentUser = (): CurrentUser | null => {
+  try {
+    const raw = localStorage.getItem('currentUser');
+    return raw ? (JSON.parse(raw) as CurrentUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem('currentUser');
+};

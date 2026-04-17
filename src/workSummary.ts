@@ -1,4 +1,4 @@
-import type { HourlyRate, Report, Youth } from './types';
+﻿import type { HourlyRate, Report, Youth } from './types';
 import { calculateAge } from './data';
 
 export const MANDATORY_HOURS_LIMIT = 90;
@@ -18,10 +18,7 @@ export const isReportInCurrentCycle = (reportDate: string, referenceDate = new D
 
 const isSameMonth = (reportDate: string, referenceDate = new Date()) => {
   const date = parseLocalDate(reportDate);
-  return (
-    date.getFullYear() === referenceDate.getFullYear() &&
-    date.getMonth() === referenceDate.getMonth()
-  );
+  return date.getFullYear() === referenceDate.getFullYear() && date.getMonth() === referenceDate.getMonth();
 };
 
 const getYouthRate = (youth: Youth, rates: HourlyRate[]) => {
@@ -36,8 +33,9 @@ export interface YouthWorkSummary {
   payableCumulativeHours: number;
   payablePendingHours: number;
   currentMonthHours: number;
-  payablePendingAmount: number; // זה הסכום שיוצג בטבלה
+  payablePendingAmount: number;
   totalEarnedAmount: number;
+  manualAdjustmentHours: number;
 }
 
 export const buildYouthWorkSummary = (
@@ -67,7 +65,10 @@ export const buildYouthWorkSummary = (
 
     cycleApprovedHours += report.totalHours;
 
-    const mandatoryHoursForReport = Math.max(0, Math.min(MANDATORY_HOURS_LIMIT - mandatoryCompletedHours, report.totalHours));
+    const mandatoryHoursForReport = Math.max(
+      0,
+      Math.min(MANDATORY_HOURS_LIMIT - mandatoryCompletedHours, report.totalHours),
+    );
     const payableHoursForReport = Math.max(0, report.totalHours - mandatoryHoursForReport);
 
     mandatoryCompletedHours += mandatoryHoursForReport;
@@ -78,18 +79,21 @@ export const buildYouthWorkSummary = (
     }
   }
 
+  const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
+  const effectiveCycleHours = Math.max(0, cycleApprovedHours + manualAdjustmentHours);
+  const effectiveMandatoryHours = Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours);
+  const effectivePayableHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
   const hourlyRate = getYouthRate(youth, rates);
-  
-  // חישוב שעות שטרם שולמו (סיכום מצטבר פחות מה שכבר אופס)
-  const payablePendingHours = Math.max(0, payableCumulativeHours - Number(youth.lastResetHours ?? 0));
+  const payablePendingHours = Math.max(0, effectivePayableHours - Number(youth.lastResetHours ?? 0));
 
   return {
-    cycleApprovedHours,
-    mandatoryCompletedHours,
-    payableCumulativeHours,
-    payablePendingHours, // זה מה שהטבלה תציג עכשיו
+    cycleApprovedHours: effectiveCycleHours,
+    mandatoryCompletedHours: effectiveMandatoryHours,
+    payableCumulativeHours: effectivePayableHours,
+    payablePendingHours,
     currentMonthHours,
     payablePendingAmount: payablePendingHours * hourlyRate,
-    totalEarnedAmount: payableCumulativeHours * hourlyRate,
+    totalEarnedAmount: effectivePayableHours * hourlyRate,
+    manualAdjustmentHours,
   };
 };

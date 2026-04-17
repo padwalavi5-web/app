@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiCalendar, FiClock, FiFileText, FiPlus, FiSend, FiTrendingUp } from 'react-icons/fi';
 import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth } from '../data';
 import CircularProgress from './CircularProgress';
-import type { Branch, HourlyRate, Report, Youth } from '../types';
+import type { Branch, CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary, MANDATORY_HOURS_LIMIT } from '../workSummary';
 
 const OTHER_BRANCH_NAME = 'אחר';
@@ -16,8 +17,8 @@ const statusLabels: Record<Report['status'], string> = {
 
 const statusClasses: Record<Report['status'], string> = {
   pending: 'chip',
-  approved: 'chip bg-[rgba(47,140,112,0.14)] text-[var(--success)] border-[rgba(47,140,112,0.18)]',
-  rejected: 'chip bg-[rgba(200,106,118,0.14)] text-[var(--danger)] border-[rgba(200,106,118,0.18)]',
+  approved: 'chip bg-[rgba(21,128,61,0.12)] text-[var(--success)] border-[rgba(21,128,61,0.12)]',
+  rejected: 'chip chip-danger',
 };
 
 const YouthDashboard = () => {
@@ -33,9 +34,10 @@ const YouthDashboard = () => {
     endTime: '',
     details: '',
   });
-  const currentUser = getCurrentUser();
+  const currentUser = getCurrentUser() as CurrentUser | null;
+  const youthUser = currentUser?.role === 'youth' ? currentUser : null;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [branchList, rateList, reportList, youthList] = await Promise.all([
       getBranches(),
       getRates(),
@@ -46,12 +48,16 @@ const YouthDashboard = () => {
     setBranches(branchList);
     setRates(rateList);
     setReports(reportList);
-    setYouth(youthList.find((item) => item.id === currentUser?.id) ?? null);
-  };
+    setYouth(youthList.find((item) => item.id === youthUser?.id) ?? null);
+  }, [youthUser?.id]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!youthUser) {
+      return;
+    }
+
+    void loadData();
+  }, [loadData, youthUser]);
 
   const branchOptions = useMemo(() => {
     const existingNames = new Set(branches.map((branch) => branch.name));
@@ -61,32 +67,30 @@ const YouthDashboard = () => {
   const userReports = useMemo(
     () =>
       reports
-        .filter((item) => item.youthId === currentUser?.id)
+        .filter((item) => item.youthId === (youthUser?.id ?? ''))
         .slice()
         .sort((left, right) => `${right.date}T${right.startTime}`.localeCompare(`${left.date}T${left.startTime}`)),
-    [reports, currentUser?.id],
+    [reports, youthUser?.id],
   );
 
-  const summary = useMemo(
-    () => (youth ? buildYouthWorkSummary(youth, reports, rates) : null),
-    [youth, reports, rates],
-  );
+  const summary = useMemo(() => (youth ? buildYouthWorkSummary(youth, reports, rates) : null), [youth, reports, rates]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!currentUser?.id) {
-      alert('צריך להתחבר מחדש לפני שליחת דיווח');
+
+    if (!youthUser) {
+      alert('צריך להתחבר מחדש לפני שליחת דיווח.');
       return;
     }
 
     if (!report.branch || !report.date || !report.startTime || !report.endTime) {
-      alert('נא למלא את כל השדות');
+      alert('נא למלא את כל השדות.');
       return;
     }
 
     const isOtherBranch = report.branch === OTHER_BRANCH_NAME;
     if (isOtherBranch && !report.details.trim()) {
-      alert('בדיווח על ענף אחר חייבים להוסיף פירוט עבודה');
+      alert('בדיווח על ענף אחר צריך להוסיף פירוט עבודה.');
       return;
     }
 
@@ -95,13 +99,13 @@ const YouthDashboard = () => {
     const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
     if (Number.isNaN(totalHours) || totalHours <= 0) {
-      alert('שעת הסיום חייבת להיות אחרי שעת ההתחלה');
+      alert('שעת הסיום חייבת להיות אחרי שעת ההתחלה.');
       return;
     }
 
     await addReport({
-      youthId: currentUser.id,
-      youthName: currentUser.name,
+      youthId: youthUser.id,
+      youthName: youthUser.name,
       branch: report.branch,
       details: isOtherBranch ? report.details.trim() : '',
       date: report.date,
@@ -112,13 +116,7 @@ const YouthDashboard = () => {
       status: 'pending',
     });
 
-    setReport({
-      branch: '',
-      date: getTodayDate(),
-      startTime: '',
-      endTime: '',
-      details: '',
-    });
+    setReport({ branch: '', date: getTodayDate(), startTime: '', endTime: '', details: '' });
     setIsReportFormOpen(false);
     await loadData();
   };
@@ -129,43 +127,58 @@ const YouthDashboard = () => {
         <section className="glass-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="page-title mb-2">שלום {currentUser?.name}</h1>
-              <p className="page-subtitle">דשבורד אישי עם שעות חובה, שעות לתשלום והיסטוריית דיווחים.</p>
+              <div className="chip mb-3">אזור אישי</div>
+              <h1 className="page-title mb-2">שלום {youthUser?.name ?? ''}</h1>
+              <p className="page-subtitle">כאן אפשר לדווח שעות, לראות את סטטוס האישורים, ולעקוב אחרי שעות החובה והשעות לתשלום.</p>
             </div>
-            <button onClick={() => setIsReportFormOpen(true)} className="btn-primary">
+            <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-primary">
+              <FiPlus size={18} />
               דיווח חדש
             </button>
           </div>
 
           {summary && (
-            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="hero-grid items-stretch">
               <div className="content-card flex flex-col items-center justify-center p-6">
                 <CircularProgress
                   value={Math.min(summary.mandatoryCompletedHours, MANDATORY_HOURS_LIMIT)}
                   max={MANDATORY_HOURS_LIMIT}
-                  size={170}
+                  size={190}
                   strokeWidth={12}
-                  color="#3c7f88"
+                  color="#0f766e"
                 />
-                <div className="mt-4 text-lg font-semibold">שעות חובה שהושלמו</div>
+                <div className="mt-5 text-xl font-semibold">התקדמות שעות חובה</div>
+                <p className="page-subtitle mt-2 text-center">המערכת משלבת גם תיקונים ידניים אם עודכנו על ידי המדריך.</p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="content-card p-5">
-                  <div className="page-subtitle mb-2">שעות מאושרות במחזור הנוכחי</div>
-                  <div className="text-3xl font-semibold">{summary.cycleApprovedHours.toFixed(1)}</div>
+              <div className="metric-grid">
+                <div className="stat-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">שעות במחזור</span>
+                    <span className="icon-badge"><FiTrendingUp size={18} /></span>
+                  </div>
+                  <div className="stat-value">{summary.cycleApprovedHours.toFixed(1)}</div>
                 </div>
-                <div className="content-card p-5">
-                  <div className="page-subtitle mb-2">שעות לתשלום כרגע</div>
-                  <div className="text-3xl font-semibold">{summary.payablePendingHours.toFixed(1)}</div>
+                <div className="stat-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">שעות לתשלום</span>
+                    <span className="icon-badge"><FiClock size={18} /></span>
+                  </div>
+                  <div className="stat-value">{summary.payablePendingHours.toFixed(1)}</div>
                 </div>
-                <div className="content-card p-5">
-                  <div className="page-subtitle mb-2">כסף שנצבר לתשלום</div>
-                  <div className="text-3xl font-semibold">₪{summary.payablePendingAmount.toFixed(2)}</div>
+                <div className="stat-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">כסף פתוח</span>
+                    <span className="icon-badge"><FiFileText size={18} /></span>
+                  </div>
+                  <div className="stat-value">₪{summary.payablePendingAmount.toFixed(0)}</div>
                 </div>
-                <div className="content-card p-5">
-                  <div className="page-subtitle mb-2">שעות מאושרות החודש</div>
-                  <div className="text-3xl font-semibold">{summary.currentMonthHours.toFixed(1)}</div>
+                <div className="stat-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">השעות החודש</span>
+                    <span className="icon-badge"><FiCalendar size={18} /></span>
+                  </div>
+                  <div className="stat-value">{summary.currentMonthHours.toFixed(1)}</div>
                 </div>
               </div>
             </div>
@@ -173,10 +186,17 @@ const YouthDashboard = () => {
         </section>
 
         <section className="glass-panel p-6 sm:p-8">
-          <h2 className="text-2xl font-semibold mb-4">היסטוריית דיווחים</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="section-title">היסטוריית דיווחים</h2>
+              <p className="page-subtitle">כל הדיווחים האחרונים שלך מרוכזים במקום אחד.</p>
+            </div>
+            <div className="chip">{userReports.length} דיווחים</div>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
             {userReports.length === 0 ? (
-              <div className="content-card p-6">
+              <div className="empty-state">
                 <p className="page-subtitle">עדיין אין דיווחים.</p>
               </div>
             ) : (
@@ -185,14 +205,12 @@ const YouthDashboard = () => {
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div>
                       <div className="text-lg font-semibold">{item.branch}</div>
-                      <div className="page-subtitle">
-                        {item.date} | {item.startTime}-{item.endTime}
-                      </div>
+                      <div className="page-subtitle">{item.date} | {item.startTime}-{item.endTime}</div>
                     </div>
                     <div className={statusClasses[item.status]}>{statusLabels[item.status]}</div>
                   </div>
-                  <div className="page-subtitle mb-2">סה"כ {item.totalHours.toFixed(1)} שעות</div>
-                  {item.details && <div className="rounded-2xl bg-[rgba(237,244,247,0.85)] p-4 text-sm">{item.details}</div>}
+                  <div className="mb-3 text-sm text-slate-600">סה"כ {item.totalHours.toFixed(1)} שעות</div>
+                  {item.details && <div className="rounded-3xl bg-slate-50/90 p-4 text-sm">{item.details}</div>}
                 </div>
               ))
             )}
@@ -201,22 +219,23 @@ const YouthDashboard = () => {
       </div>
 
       {isReportFormOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/35 p-4" dir="rtl">
+        <div className="modal-backdrop" dir="rtl">
           <div className="content-card w-full max-w-xl p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold">דיווח חדש</h2>
-              <button onClick={() => setIsReportFormOpen(false)} className="btn-secondary px-3 py-2">
+              <div>
+                <div className="chip mb-3">דיווח שעות</div>
+                <h2 className="section-title">יצירת דיווח חדש</h2>
+              </div>
+              <button type="button" onClick={() => setIsReportFormOpen(false)} className="btn-secondary px-3 py-2">
                 סגור
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="b" className="field-label">
-                  ענף
-                </label>
+                <label htmlFor="branch" className="field-label">ענף</label>
                 <select
-                  id="b"
+                  id="branch"
                   required
                   className="field-input"
                   value={report.branch}
@@ -230,19 +249,15 @@ const YouthDashboard = () => {
                 >
                   <option value="">בחר ענף</option>
                   {branchOptions.map((branch) => (
-                    <option key={branch.name} value={branch.name}>
-                      {branch.name}
-                    </option>
+                    <option key={branch.name} value={branch.name}>{branch.name}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="d" className="field-label">
-                  תאריך
-                </label>
+                <label htmlFor="date" className="field-label">תאריך</label>
                 <input
-                  id="d"
+                  id="date"
                   type="date"
                   required
                   className="field-input"
@@ -253,11 +268,9 @@ const YouthDashboard = () => {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="s" className="field-label">
-                    שעת התחלה
-                  </label>
+                  <label htmlFor="start" className="field-label">שעת התחלה</label>
                   <input
-                    id="s"
+                    id="start"
                     type="time"
                     required
                     className="field-input"
@@ -266,11 +279,9 @@ const YouthDashboard = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="e" className="field-label">
-                    שעת סיום
-                  </label>
+                  <label htmlFor="end" className="field-label">שעת סיום</label>
                   <input
-                    id="e"
+                    id="end"
                     type="time"
                     required
                     className="field-input"
@@ -282,9 +293,7 @@ const YouthDashboard = () => {
 
               {report.branch === OTHER_BRANCH_NAME && (
                 <div>
-                  <label htmlFor="details" className="field-label">
-                    פירוט העבודה
-                  </label>
+                  <label htmlFor="details" className="field-label">פירוט העבודה</label>
                   <textarea
                     id="details"
                     required
@@ -297,6 +306,7 @@ const YouthDashboard = () => {
               )}
 
               <button type="submit" className="btn-primary w-full">
+                <FiSend size={18} />
                 שלח דיווח
               </button>
             </form>
