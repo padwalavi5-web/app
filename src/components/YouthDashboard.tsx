@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiFileText, FiLogOut, FiPlus, FiSend, FiTrendingUp } from 'react-icons/fi';
 import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
@@ -29,6 +29,7 @@ const YouthDashboard = () => {
   const [youth, setYouth] = useState<Youth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [report, setReport] = useState({
     branch: '',
@@ -38,7 +39,8 @@ const YouthDashboard = () => {
     details: '',
   });
   const navigate = useNavigate();
-  const currentUser = getCurrentUser() as CurrentUser | null;
+  const redirectedRef = useRef(false);
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const youthUser = currentUser?.role === 'youth' ? currentUser : null;
 
   const loadData = useCallback(async () => {
@@ -47,6 +49,7 @@ const YouthDashboard = () => {
     }
 
     setIsLoading(true);
+    setLoadError('');
     try {
       const [branchList, rateList, reportList, youthList] = await Promise.all([
         getBranches(),
@@ -55,20 +58,23 @@ const YouthDashboard = () => {
         getYouth(),
       ]);
 
+      const youthRecord = youthList.find((item) => item.id === youthUser.id) ?? null;
+      if (!youthRecord) {
+        logout();
+        if (!redirectedRef.current) {
+          redirectedRef.current = true;
+          navigate('/');
+        }
+        return;
+      }
+
       setBranches(branchList);
       setRates(rateList);
       setReports(reportList);
-      const youthRecord = youthList.find((item) => item.id === youthUser.id) ?? null;
       setYouth(youthRecord);
-
-      if (!youthRecord) {
-        logout();
-        alert('המשתמש כבר לא קיים במערכת. צריך להתחבר מחדש.');
-        navigate('/');
-      }
     } catch (error) {
       console.error(error);
-      alert('טעינת הנתונים נכשלה. נסה שוב בעוד רגע.');
+      setLoadError('טעינת הנתונים נכשלה');
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +82,10 @@ const YouthDashboard = () => {
 
   useEffect(() => {
     if (!youthUser) {
-      navigate('/');
+      if (!redirectedRef.current) {
+        redirectedRef.current = true;
+        navigate('/');
+      }
       return;
     }
 
@@ -103,7 +112,6 @@ const YouthDashboard = () => {
     event.preventDefault();
 
     if (!youthUser) {
-      alert('צריך להתחבר מחדש לפני שליחת דיווח.');
       return;
     }
 
@@ -114,7 +122,7 @@ const YouthDashboard = () => {
 
     const isOtherBranch = report.branch === OTHER_BRANCH_NAME;
     if (isOtherBranch && !report.details.trim()) {
-      alert('בדיווח על ענף אחר צריך להוסיף פירוט עבודה.');
+      alert('צריך להוסיף פירוט עבודה.');
       return;
     }
 
@@ -147,30 +155,29 @@ const YouthDashboard = () => {
       await loadData();
     } catch (error) {
       console.error(error);
-      alert('שמירת הדיווח נכשלה. בדוק חיבור ונסה שוב.');
+      alert('שמירת הדיווח נכשלה.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (!youthUser || isLoading) {
-    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען נתונים...</div>;
+    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-6xl space-y-6">
-        <section className="glass-panel p-6 sm:p-8">
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="page-wrap max-w-6xl space-y-5">
+        <section className="glass-panel p-5 sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <div className="chip mb-3">אזור אישי</div>
-              <h1 className="page-title mb-2">שלום {youthUser.name}</h1>
-              <p className="page-subtitle">כאן אפשר לדווח שעות, לראות את סטטוס האישורים, ולעקוב אחרי שעות החובה והשעות לתשלום.</p>
+              <div className="chip mb-2">{youthUser.name}</div>
+              <h1 className="page-title mb-0">דשבורד אישי</h1>
             </div>
             <div className="toolbar">
               <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-primary">
                 <FiPlus size={18} />
-                דיווח חדש
+                דיווח
               </button>
               <button
                 type="button"
@@ -181,50 +188,49 @@ const YouthDashboard = () => {
                 className="btn-secondary"
               >
                 <FiLogOut size={18} />
-                התנתק
               </button>
             </div>
           </div>
 
+          {loadError ? <div className="chip chip-danger mb-4">{loadError}</div> : null}
+
           {summary && (
             <div className="hero-grid items-stretch">
-              <div className="content-card flex flex-col items-center justify-center p-6">
+              <div className="content-card flex flex-col items-center justify-center p-5">
                 <CircularProgress
                   value={Math.min(summary.mandatoryCompletedHours, MANDATORY_HOURS_LIMIT)}
                   max={MANDATORY_HOURS_LIMIT}
-                  size={190}
+                  size={176}
                   strokeWidth={12}
                   color="#0f766e"
                 />
-                <div className="mt-5 text-xl font-semibold">התקדמות שעות חובה</div>
-                <p className="page-subtitle mt-2 text-center">המערכת משלבת גם תיקונים ידניים אם עודכנו על ידי המדריך.</p>
               </div>
 
               <div className="metric-grid">
-                <div className="stat-card">
+                <div className="stat-card compact-card">
                   <div className="flex items-center justify-between">
-                    <span className="page-subtitle">שעות במחזור</span>
+                    <span className="page-subtitle">במחזור</span>
                     <span className="icon-badge"><FiTrendingUp size={18} /></span>
                   </div>
                   <div className="stat-value">{summary.cycleApprovedHours.toFixed(1)}</div>
                 </div>
-                <div className="stat-card">
+                <div className="stat-card compact-card">
                   <div className="flex items-center justify-between">
-                    <span className="page-subtitle">שעות לתשלום</span>
+                    <span className="page-subtitle">לתשלום</span>
                     <span className="icon-badge"><FiClock size={18} /></span>
                   </div>
                   <div className="stat-value">{summary.payablePendingHours.toFixed(1)}</div>
                 </div>
-                <div className="stat-card">
+                <div className="stat-card compact-card">
                   <div className="flex items-center justify-between">
-                    <span className="page-subtitle">כסף פתוח</span>
+                    <span className="page-subtitle">כסף</span>
                     <span className="icon-badge"><FiFileText size={18} /></span>
                   </div>
                   <div className="stat-value">₪{summary.payablePendingAmount.toFixed(0)}</div>
                 </div>
-                <div className="stat-card">
+                <div className="stat-card compact-card">
                   <div className="flex items-center justify-between">
-                    <span className="page-subtitle">השעות החודש</span>
+                    <span className="page-subtitle">החודש</span>
                     <span className="icon-badge"><FiCalendar size={18} /></span>
                   </div>
                   <div className="stat-value">{summary.currentMonthHours.toFixed(1)}</div>
@@ -234,33 +240,30 @@ const YouthDashboard = () => {
           )}
         </section>
 
-        <section className="glass-panel p-6 sm:p-8">
+        <section className="glass-panel p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="section-title">היסטוריית דיווחים</h2>
-              <p className="page-subtitle">כל הדיווחים האחרונים שלך מרוכזים במקום אחד.</p>
-            </div>
-            <div className="chip">{userReports.length} דיווחים</div>
+            <h2 className="section-title">דיווחים</h2>
+            <div className="chip">{userReports.length}</div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {userReports.length === 0 ? (
-              <div className="empty-state">
-                <p className="page-subtitle">עדיין אין דיווחים.</p>
+              <div className="empty-state py-6">
+                <p className="page-subtitle">אין דיווחים</p>
               </div>
             ) : (
               userReports.map((item) => (
-                <div key={item.id} className="content-card p-5">
+                <div key={item.id} className="content-card p-4">
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-lg font-semibold">{item.branch}</div>
-                      <div className="page-subtitle">{item.date} | {item.startTime}-{item.endTime}</div>
+                      <div className="text-base font-semibold">{item.branch}</div>
+                      <div className="page-subtitle text-sm">{item.date} | {item.startTime}-{item.endTime}</div>
                     </div>
                     <div className={statusClasses[item.status]}>{statusLabels[item.status]}</div>
                   </div>
                   <div className="mb-3 text-sm text-slate-600">סה"כ {item.totalHours.toFixed(1)} שעות</div>
-                  {item.reviewNote && <div className="mb-3 rounded-3xl bg-rose-50/90 p-4 text-sm text-rose-700">הערת דחייה: {item.reviewNote}</div>}
-                  {item.details && <div className="rounded-3xl bg-slate-50/90 p-4 text-sm">{item.details}</div>}
+                  {item.reviewNote && <div className="mb-3 rounded-3xl bg-rose-50/90 p-3 text-sm text-rose-700">{item.reviewNote}</div>}
+                  {item.details && <div className="rounded-3xl bg-slate-50/90 p-3 text-sm">{item.details}</div>}
                 </div>
               ))
             )}
@@ -272,10 +275,7 @@ const YouthDashboard = () => {
         <div className="modal-backdrop" dir="rtl">
           <div className="content-card w-full max-w-xl p-6">
             <div className="mb-5 flex items-center justify-between gap-4">
-              <div>
-                <div className="chip mb-3">דיווח שעות</div>
-                <h2 className="section-title">יצירת דיווח חדש</h2>
-              </div>
+              <h2 className="section-title">דיווח שעות</h2>
               <button type="button" onClick={() => setIsReportFormOpen(false)} className="btn-secondary px-3 py-2">
                 סגור
               </button>
@@ -318,7 +318,7 @@ const YouthDashboard = () => {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="start" className="field-label">שעת התחלה</label>
+                  <label htmlFor="start" className="field-label">התחלה</label>
                   <input
                     id="start"
                     type="time"
@@ -329,7 +329,7 @@ const YouthDashboard = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="end" className="field-label">שעת סיום</label>
+                  <label htmlFor="end" className="field-label">סיום</label>
                   <input
                     id="end"
                     type="time"
@@ -343,21 +343,21 @@ const YouthDashboard = () => {
 
               {report.branch === OTHER_BRANCH_NAME && (
                 <div>
-                  <label htmlFor="details" className="field-label">פירוט העבודה</label>
+                  <label htmlFor="details" className="field-label">פירוט</label>
                   <textarea
                     id="details"
                     required
-                    className="field-input min-h-32"
+                    className="field-input min-h-28"
                     value={report.details}
                     onChange={(event) => setReport({ ...report, details: event.target.value })}
-                    placeholder="מה נעשה בפועל בענף האחר?"
+                    placeholder="מה נעשה?"
                   />
                 </div>
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
                 <FiSend size={18} />
-                {isSubmitting ? 'שולח דיווח...' : 'שלח דיווח'}
+                {isSubmitting ? 'שולח...' : 'שלח'}
               </button>
             </form>
           </div>

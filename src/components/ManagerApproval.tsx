@@ -1,42 +1,46 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiClock, FiFileText, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiX } from 'react-icons/fi';
 import { getCurrentUser, getReports, updateReport } from '../data';
 import type { CurrentUser, Report } from '../types';
-import AppMark from './AppMark';
 
 const ManagerApproval = () => {
-  const [user, setUser] = useState<CurrentUser | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
+  const managerUser = currentUser?.role === 'manager' ? currentUser : null;
 
-  const loadReports = useCallback(async (currentUser: CurrentUser) => {
-    const allReports = await getReports();
-    if (currentUser.role !== 'manager') {
+  const loadReports = useCallback(async () => {
+    if (!managerUser) {
       return;
     }
 
-    const pendingReports = allReports.filter(
-      (report) =>
-        report.status === 'pending' &&
-        (report.approvalTarget ?? 'manager') === 'manager' &&
-        report.branch === currentUser.branch,
-    );
-    setReports(pendingReports);
-  }, []);
+    setIsLoading(true);
+    try {
+      const allReports = await getReports();
+      const pendingReports = allReports.filter(
+        (report) =>
+          report.status === 'pending' &&
+          (report.approvalTarget ?? 'manager') === 'manager' &&
+          report.branch === managerUser.branch,
+      );
+      setReports(pendingReports);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [managerUser]);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser || currentUser.role !== 'manager') {
+    if (!managerUser) {
       navigate('/');
       return;
     }
 
-    setUser(currentUser);
-    void loadReports(currentUser);
-  }, [loadReports, navigate]);
+    void loadReports();
+  }, [loadReports, managerUser, navigate]);
 
   const handleApprove = async (reportId?: string) => {
     if (!reportId) {
@@ -66,93 +70,45 @@ const ManagerApproval = () => {
     }
   };
 
-  if (!user || user.role !== 'manager') {
+  if (!managerUser || isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-6xl space-y-6">
-        <section className="glass-panel p-6 sm:p-8 lg:p-10">
-          <div className="hero-grid items-start">
-            <div className="space-y-5">
-              <div className="flex items-center gap-4">
-                <AppMark compact />
-                <div>
-                  <div className="chip mb-3">מרכז אישורי ענף</div>
-                  <h1 className="page-title mb-2">ענף {user.branch}</h1>
-                  <p className="page-subtitle">כל הדיווחים שממתינים לאישור מרוכזים כאן, עם צפייה מהירה ושתי פעולות ברורות: אישור או דחייה.</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="stat-card">
-                  <div className="page-subtitle">ממתינים כרגע</div>
-                  <div className="stat-value">{reports.length}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="page-subtitle">סטטוס עבודה</div>
-                  <div className="stat-value">פעיל</div>
-                </div>
-                <div className="stat-card">
-                  <div className="page-subtitle">סוג מסך</div>
-                  <div className="stat-value">אישורים</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="content-card p-6">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="section-title">הנחיה מהירה</h2>
-                  <p className="page-subtitle">אשר רק דיווחים תקינים. אם חסר פירוט, דחה עם סיבה קצרה וברורה.</p>
-                </div>
-                <div className="icon-badge">
-                  <FiFileText size={18} />
-                </div>
-              </div>
-              <div className="space-y-3 text-sm text-slate-600">
-                <div className="rounded-3xl bg-slate-50/90 p-4">דיווח על ענף "אחר" אמור לכלול פירוט עבודה.</div>
-                <div className="rounded-3xl bg-slate-50/90 p-4">שעות לא הגיוניות או טווחי זמן שגויים לא כדאי לאשר.</div>
-                <div className="rounded-3xl bg-slate-50/90 p-4">דחייה נשמרת עם הערה כדי שלמדריך יהיה קל להבין מה קרה.</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="glass-panel p-6 sm:p-8">
+      <div className="page-wrap max-w-6xl space-y-5">
+        <section className="glass-panel p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="section-title">דיווחים ממתינים</h2>
-              <p className="page-subtitle">תצוגת כרטיסים נוחה לאישור מהיר.</p>
+              <div className="chip mb-2">{managerUser.branch}</div>
+              <h1 className="page-title">אישורים</h1>
             </div>
             <div className="chip chip-warm">
               <FiClock size={12} />
-              {reports.length} ממתינים
+              {reports.length}
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {reports.length === 0 ? (
-              <div className="empty-state">
-                <p className="page-subtitle">אין דיווחים ממתינים כרגע.</p>
+              <div className="empty-state py-6">
+                <p className="page-subtitle">אין דיווחים</p>
               </div>
             ) : (
               reports.map((report) => (
-                <div key={report.id} className="content-card p-5">
+                <div key={report.id} className="content-card p-4">
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-lg font-semibold">{report.youthName}</div>
-                      <div className="page-subtitle">{report.date} | {report.startTime}-{report.endTime}</div>
+                      <div className="text-base font-semibold">{report.youthName}</div>
+                      <div className="page-subtitle text-sm">{report.date} | {report.startTime}-{report.endTime}</div>
                     </div>
                     <div className="chip chip-warm">
                       <FiClock size={12} />
-                      {report.totalHours.toFixed(1)} שעות
+                      {report.totalHours.toFixed(1)}
                     </div>
                   </div>
 
-                  <div className="mb-3 text-sm text-slate-500">ענף: {report.branch}</div>
-                  {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-4 text-sm">{report.details}</div>}
+                  {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div>}
 
                   <div className="flex gap-2">
                     <button type="button" onClick={() => void handleApprove(report.id)} className="btn-primary flex-1">
@@ -175,8 +131,8 @@ const ManagerApproval = () => {
         <div className="modal-backdrop" dir="rtl">
           <div className="content-card w-full max-w-md p-6">
             <div className="mb-4">
-              <div className="chip chip-danger mb-3">דחיית דיווח</div>
-              <h2 className="section-title">להוסיף סיבה לדחייה</h2>
+              <div className="chip chip-danger mb-3">דחייה</div>
+              <h2 className="section-title">סיבה</h2>
             </div>
             <textarea
               value={rejectNote}
@@ -186,7 +142,7 @@ const ManagerApproval = () => {
             />
             <div className="flex gap-2">
               <button type="button" onClick={handleReject} className="btn-danger flex-1">
-                שלח דחייה
+                שלח
               </button>
               <button type="button" onClick={() => setSelectedReport(null)} className="btn-secondary flex-1">
                 ביטול

@@ -1,23 +1,24 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiDownload, FiLayers, FiLogOut, FiRefreshCw, FiSettings, FiTrendingUp, FiUsers } from 'react-icons/fi';
+import { FiDownload, FiLayers, FiLogOut, FiRefreshCw, FiTrendingUp, FiUsers } from 'react-icons/fi';
 import { getCurrentUser, getRates, getReports, getYouth, logout, resetPaidHours } from '../data';
-import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
+import type { CurrentUser, HourlyRate, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
-import AppMark from './AppMark';
 
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const navigate = useNavigate();
-  const currentUser = getCurrentUser() as CurrentUser | null;
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
       const [youthResponse, reportsResponse, ratesResponse] = await Promise.all([getYouth(), getReports(), getRates()]);
       setYouthList(youthResponse);
@@ -25,7 +26,7 @@ const GuideSummary = () => {
       setRates(ratesResponse);
     } catch (error) {
       console.error(error);
-      alert('טעינת נתוני המדריך נכשלה. נסה שוב.');
+      setLoadError('טעינת הנתונים נכשלה');
     } finally {
       setIsLoading(false);
     }
@@ -86,12 +87,11 @@ const GuideSummary = () => {
 
   const handleExportAndReset = async () => {
     if (!summaryRows.length) {
-      alert('אין כרגע נתונים לייצוא.');
+      alert('אין נתונים לייצוא.');
       return;
     }
 
-    const confirmed = window.confirm('הפעולה תייצא קובץ לאקסל ולאחר מכן תאפס את שעות התשלום. להמשיך?');
-    if (!confirmed) {
+    if (!window.confirm('לייצא ולאפס?')) {
       return;
     }
 
@@ -100,119 +100,87 @@ const GuideSummary = () => {
       exportCsv();
       await Promise.all(summaryRows.map((row) => resetPaidHours(row.youth.id, row.summary.payableCumulativeHours)));
       await fetchData();
-      alert('הקובץ יוצא והאיפוס הושלם בהצלחה.');
     } catch (error) {
       console.error(error);
-      alert('הפעולה לא הושלמה. בדוק את החיבור ל-Firebase ונסה שוב.');
+      alert('הפעולה נכשלה.');
     } finally {
       setIsExporting(false);
     }
   };
 
   if (!guideUser || isLoading) {
-    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען נתונים...</div>;
+    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap space-y-6">
-        <section className="glass-panel p-6 sm:p-8 lg:p-10">
-          <div className="hero-grid items-start">
-            <div className="space-y-5">
-              <div className="flex items-center gap-4">
-                <AppMark compact />
-                <div>
-                  <div className="chip mb-3">מרכז בקרה למדריך</div>
-                  <h1 className="page-title mb-2">סיכום מדריך וניהול תשלומים</h1>
-                  <p className="page-subtitle">מבט מרוכז על שעות לתשלום, תיקונים ידניים, ופעולת ייצוא ואיפוס מאוחדת בלחיצה אחת.</p>
-                </div>
-              </div>
-
-              <div className="metric-grid">
-                <div className="stat-card">
-                  <div className="flex items-center justify-between">
-                    <span className="page-subtitle">סה"כ נערים</span>
-                    <span className="icon-badge"><FiUsers size={18} /></span>
-                  </div>
-                  <div className="stat-value">{summaryRows.length}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="flex items-center justify-between">
-                    <span className="page-subtitle">שעות לתשלום</span>
-                    <span className="icon-badge"><FiTrendingUp size={18} /></span>
-                  </div>
-                  <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="flex items-center justify-between">
-                    <span className="page-subtitle">סכום פתוח</span>
-                    <span className="icon-badge"><FiLayers size={18} /></span>
-                  </div>
-                  <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="flex items-center justify-between">
-                    <span className="page-subtitle">שעות במחזור</span>
-                    <span className="icon-badge"><FiRefreshCw size={18} /></span>
-                  </div>
-                  <div className="stat-value">{totals.approvedHours.toFixed(1)}</div>
-                </div>
-              </div>
+      <div className="page-wrap space-y-5">
+        <section className="glass-panel p-5 sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <div className="chip mb-2">מדריך</div>
+              <h1 className="page-title">סיכום</h1>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate('/');
+              }}
+              className="btn-secondary"
+            >
+              <FiLogOut size={18} />
+            </button>
+          </div>
 
-            <div className="content-card p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <h2 className="section-title">פעולות מהירות</h2>
-                  <p className="page-subtitle">מעבר ישיר למסכי הניהול הראשיים.</p>
-                </div>
-                <span className="icon-badge"><FiSettings size={18} /></span>
+          {loadError ? <div className="chip chip-danger mb-4">{loadError}</div> : null}
+
+          <div className="metric-grid">
+            <div className="stat-card compact-card">
+              <div className="flex items-center justify-between">
+                <span className="page-subtitle">נערים</span>
+                <span className="icon-badge"><FiUsers size={18} /></span>
               </div>
-              <div className="space-y-3">
-                <button type="button" onClick={() => navigate('/guide/youth')} className="btn-secondary w-full justify-between">
-                  ניהול נוער
-                  <FiUsers size={18} />
-                </button>
-                <button type="button" onClick={() => navigate('/guide/branches')} className="btn-secondary w-full justify-between">
-                  ניהול ענפים וסיסמת מדריך
-                  <FiLayers size={18} />
-                </button>
-                <button type="button" onClick={() => navigate('/guide/rates')} className="btn-secondary w-full justify-between">
-                  ניהול תעריפים
-                  <FiTrendingUp size={18} />
-                </button>
-                <button type="button" onClick={handleExportAndReset} className="btn-primary mt-4 w-full justify-between" disabled={isExporting}>
-                  {isExporting ? 'מייצא ומאפס...' : 'ייצוא לאקסל + איפוס'}
-                  <FiDownload size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    navigate('/');
-                  }}
-                  className="btn-secondary w-full justify-between"
-                >
-                  התנתק
-                  <FiLogOut size={18} />
-                </button>
+              <div className="stat-value">{summaryRows.length}</div>
+            </div>
+            <div className="stat-card compact-card">
+              <div className="flex items-center justify-between">
+                <span className="page-subtitle">לתשלום</span>
+                <span className="icon-badge"><FiTrendingUp size={18} /></span>
               </div>
+              <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
+            </div>
+            <div className="stat-card compact-card">
+              <div className="flex items-center justify-between">
+                <span className="page-subtitle">סכום</span>
+                <span className="icon-badge"><FiLayers size={18} /></span>
+              </div>
+              <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
+            </div>
+            <div className="stat-card compact-card">
+              <div className="flex items-center justify-between">
+                <span className="page-subtitle">מחזור</span>
+                <span className="icon-badge"><FiRefreshCw size={18} /></span>
+              </div>
+              <div className="stat-value">{totals.approvedHours.toFixed(1)}</div>
             </div>
           </div>
         </section>
 
-        <section className="glass-panel p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="section-title">פירוט תשלומים לפי נער</h2>
-              <p className="page-subtitle">כולל שעות פתוחות לתשלום ותיקונים ידניים.</p>
-            </div>
-            <div className="chip chip-warm">CSV תואם אקסל</div>
+        <section className="glass-panel p-5 sm:p-6">
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <button type="button" onClick={() => navigate('/guide/youth')} className="btn-secondary">נוער</button>
+            <button type="button" onClick={() => navigate('/guide/branches')} className="btn-secondary">ענפים</button>
+            <button type="button" onClick={() => navigate('/guide/rates')} className="btn-secondary">תעריפים</button>
+            <button type="button" onClick={handleExportAndReset} className="btn-primary" disabled={isExporting}>
+              <FiDownload size={18} />
+              {isExporting ? 'מייצא...' : 'ייצוא + איפוס'}
+            </button>
           </div>
 
           {summaryRows.length === 0 ? (
-            <div className="empty-state">
-              <p className="page-subtitle">עדיין אין נתונים להצגה.</p>
+            <div className="empty-state py-6">
+              <p className="page-subtitle">אין נתונים</p>
             </div>
           ) : (
             <div className="table-shell">
@@ -220,9 +188,9 @@ const GuideSummary = () => {
                 <thead>
                   <tr>
                     <th>שם</th>
-                    <th>מספר תקציב</th>
-                    <th>שעות לתשלום</th>
-                    <th>תיקון ידני</th>
+                    <th>תקציב</th>
+                    <th>שעות</th>
+                    <th>ידני</th>
                     <th>סכום</th>
                   </tr>
                 </thead>
