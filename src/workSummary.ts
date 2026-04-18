@@ -55,7 +55,6 @@ export const buildYouthWorkSummary = (
 
   let cycleApprovedHours = 0;
   let mandatoryCompletedHours = 0;
-  let payableCumulativeHours = 0;
   let currentMonthHours = 0;
 
   for (const report of approvedReports) {
@@ -69,10 +68,8 @@ export const buildYouthWorkSummary = (
       0,
       Math.min(MANDATORY_HOURS_LIMIT - mandatoryCompletedHours, report.totalHours),
     );
-    const payableHoursForReport = Math.max(0, report.totalHours - mandatoryHoursForReport);
 
     mandatoryCompletedHours += mandatoryHoursForReport;
-    payableCumulativeHours += payableHoursForReport;
 
     if (isSameMonth(report.date, referenceDate)) {
       currentMonthHours += report.totalHours;
