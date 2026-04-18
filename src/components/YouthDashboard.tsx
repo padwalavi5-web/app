@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiCalendar, FiClock, FiFileText, FiPlus, FiSend, FiTrendingUp } from 'react-icons/fi';
-import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth } from '../data';
+import { useNavigate } from 'react-router-dom';
+import { FiCalendar, FiClock, FiFileText, FiLogOut, FiPlus, FiSend, FiTrendingUp } from 'react-icons/fi';
+import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
 import CircularProgress from './CircularProgress';
 import type { Branch, CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary, MANDATORY_HOURS_LIMIT } from '../workSummary';
@@ -26,6 +27,8 @@ const YouthDashboard = () => {
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [youth, setYouth] = useState<Youth | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [report, setReport] = useState({
     branch: '',
@@ -34,30 +37,51 @@ const YouthDashboard = () => {
     endTime: '',
     details: '',
   });
+  const navigate = useNavigate();
   const currentUser = getCurrentUser() as CurrentUser | null;
   const youthUser = currentUser?.role === 'youth' ? currentUser : null;
 
   const loadData = useCallback(async () => {
-    const [branchList, rateList, reportList, youthList] = await Promise.all([
-      getBranches(),
-      getRates(),
-      getReports(),
-      getYouth(),
-    ]);
-
-    setBranches(branchList);
-    setRates(rateList);
-    setReports(reportList);
-    setYouth(youthList.find((item) => item.id === youthUser?.id) ?? null);
-  }, [youthUser?.id]);
-
-  useEffect(() => {
     if (!youthUser) {
       return;
     }
 
+    setIsLoading(true);
+    try {
+      const [branchList, rateList, reportList, youthList] = await Promise.all([
+        getBranches(),
+        getRates(),
+        getReports(),
+        getYouth(),
+      ]);
+
+      setBranches(branchList);
+      setRates(rateList);
+      setReports(reportList);
+      const youthRecord = youthList.find((item) => item.id === youthUser.id) ?? null;
+      setYouth(youthRecord);
+
+      if (!youthRecord) {
+        logout();
+        alert('המשתמש כבר לא קיים במערכת. צריך להתחבר מחדש.');
+        navigate('/');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('טעינת הנתונים נכשלה. נסה שוב בעוד רגע.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigate, youthUser]);
+
+  useEffect(() => {
+    if (!youthUser) {
+      navigate('/');
+      return;
+    }
+
     void loadData();
-  }, [loadData, youthUser]);
+  }, [loadData, navigate, youthUser]);
 
   const branchOptions = useMemo(() => {
     const existingNames = new Set(branches.map((branch) => branch.name));
@@ -103,23 +127,35 @@ const YouthDashboard = () => {
       return;
     }
 
-    await addReport({
-      youthId: youthUser.id,
-      youthName: youthUser.name,
-      branch: report.branch,
-      details: isOtherBranch ? report.details.trim() : '',
-      date: report.date,
-      startTime: report.startTime,
-      endTime: report.endTime,
-      totalHours,
-      approvalTarget: isOtherBranch ? 'guide' : 'manager',
-      status: 'pending',
-    });
+    setIsSubmitting(true);
+    try {
+      await addReport({
+        youthId: youthUser.id,
+        youthName: youthUser.name,
+        branch: report.branch,
+        details: isOtherBranch ? report.details.trim() : '',
+        date: report.date,
+        startTime: report.startTime,
+        endTime: report.endTime,
+        totalHours,
+        approvalTarget: isOtherBranch ? 'guide' : 'manager',
+        status: 'pending',
+      });
 
-    setReport({ branch: '', date: getTodayDate(), startTime: '', endTime: '', details: '' });
-    setIsReportFormOpen(false);
-    await loadData();
+      setReport({ branch: '', date: getTodayDate(), startTime: '', endTime: '', details: '' });
+      setIsReportFormOpen(false);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert('שמירת הדיווח נכשלה. בדוק חיבור ונסה שוב.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (!youthUser || isLoading) {
+    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען נתונים...</div>;
+  }
 
   return (
     <div className="app-shell" dir="rtl">
@@ -128,13 +164,26 @@ const YouthDashboard = () => {
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="chip mb-3">אזור אישי</div>
-              <h1 className="page-title mb-2">שלום {youthUser?.name ?? ''}</h1>
+              <h1 className="page-title mb-2">שלום {youthUser.name}</h1>
               <p className="page-subtitle">כאן אפשר לדווח שעות, לראות את סטטוס האישורים, ולעקוב אחרי שעות החובה והשעות לתשלום.</p>
             </div>
-            <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-primary">
-              <FiPlus size={18} />
-              דיווח חדש
-            </button>
+            <div className="toolbar">
+              <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-primary">
+                <FiPlus size={18} />
+                דיווח חדש
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="btn-secondary"
+              >
+                <FiLogOut size={18} />
+                התנתק
+              </button>
+            </div>
           </div>
 
           {summary && (
@@ -210,6 +259,7 @@ const YouthDashboard = () => {
                     <div className={statusClasses[item.status]}>{statusLabels[item.status]}</div>
                   </div>
                   <div className="mb-3 text-sm text-slate-600">סה"כ {item.totalHours.toFixed(1)} שעות</div>
+                  {item.reviewNote && <div className="mb-3 rounded-3xl bg-rose-50/90 p-4 text-sm text-rose-700">הערת דחייה: {item.reviewNote}</div>}
                   {item.details && <div className="rounded-3xl bg-slate-50/90 p-4 text-sm">{item.details}</div>}
                 </div>
               ))
@@ -305,9 +355,9 @@ const YouthDashboard = () => {
                 </div>
               )}
 
-              <button type="submit" className="btn-primary w-full">
+              <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
                 <FiSend size={18} />
-                שלח דיווח
+                {isSubmitting ? 'שולח דיווח...' : 'שלח דיווח'}
               </button>
             </form>
           </div>

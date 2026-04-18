@@ -1,22 +1,23 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deleteDoc, doc } from 'firebase/firestore';
 import { FiArrowRight, FiClock, FiEdit3, FiSave, FiTrash2, FiUser } from 'react-icons/fi';
-import { calculateAge, getCurrentUser, getRates, getReports, getYouth, updateYouth } from '../data';
-import { db } from '../firebase';
+import { calculateAge, deleteYouth, getCurrentUser, getRates, getReports, getYouth, updateYouth } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
 
 const ManageYouth = () => {
-  const [user, setUser] = useState<CurrentUser | null>(null);
   const [youth, setYouth] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Youth>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const currentUser = getCurrentUser() as CurrentUser | null;
+  const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchYouthData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [youthData, reportData, rateData] = await Promise.all([getYouth(), getReports(), getRates()]);
       setYouth(youthData);
@@ -24,19 +25,20 @@ const ManageYouth = () => {
       setRates(rateData);
     } catch (error) {
       console.error('Error fetching youth:', error);
+      alert('טעינת נתוני הנוער נכשלה.');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser || currentUser.role !== 'guide') {
+    if (!guideUser) {
       navigate('/');
       return;
     }
 
-    setUser(currentUser);
     void fetchYouthData();
-  }, [fetchYouthData, navigate]);
+  }, [fetchYouthData, guideUser, navigate]);
 
   const summaryById = useMemo(
     () => new Map(youth.map((item) => [item.id, buildYouthWorkSummary(item, reports, rates)])),
@@ -44,15 +46,16 @@ const ManageYouth = () => {
   );
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('למחוק את הנער מהרשימה?')) {
+    if (!window.confirm('למחוק את הנער ואת כל הדיווחים שלו?')) {
       return;
     }
 
     try {
-      await deleteDoc(doc(db, 'youth', id));
+      await deleteYouth(id);
       await fetchYouthData();
     } catch (error) {
       console.error('Error deleting youth:', error);
+      alert('מחיקת הנער נכשלה.');
     }
   };
 
@@ -68,9 +71,9 @@ const ManageYouth = () => {
 
     try {
       await updateYouth(editingId, {
-        name: editFormData.name,
+        name: String(editFormData.name ?? '').trim(),
         birthDate: editFormData.birthDate,
-        personalBudgetNumber: editFormData.personalBudgetNumber,
+        personalBudgetNumber: String(editFormData.personalBudgetNumber ?? '').trim(),
         manualHoursAdjustment: Number(editFormData.manualHoursAdjustment ?? 0),
       });
       await fetchYouthData();
@@ -78,10 +81,11 @@ const ManageYouth = () => {
       setEditFormData({});
     } catch (error) {
       console.error('Error updating youth:', error);
+      alert('עדכון הנער נכשל.');
     }
   };
 
-  if (!user) {
+  if (!guideUser || isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
@@ -149,9 +153,7 @@ const ManageYouth = () => {
                           type="number"
                           step="0.5"
                           value={String(editFormData.manualHoursAdjustment ?? 0)}
-                          onChange={(event) =>
-                            setEditFormData({ ...editFormData, manualHoursAdjustment: Number(event.target.value) })
-                          }
+                          onChange={(event) => setEditFormData({ ...editFormData, manualHoursAdjustment: Number(event.target.value) })}
                         />
                       </div>
 

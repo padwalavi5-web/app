@@ -9,7 +9,7 @@ import {
   updateBranchPassword,
   updateGuidePassword,
 } from '../data';
-import type { Branch } from '../types';
+import type { Branch, CurrentUser } from '../types';
 
 const emptyBranch: Branch = { name: '', password: '' };
 
@@ -19,22 +19,32 @@ const ManageBranches = () => {
   const [editingBranchName, setEditingBranchName] = useState<string | null>(null);
   const [editingPassword, setEditingPassword] = useState('');
   const [guidePassword, setGuidePassword] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const currentUser = getCurrentUser() as CurrentUser | null;
+  const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchBranches = useCallback(async () => {
-    const branchList = await getBranches();
-    setBranches(branchList.sort((left, right) => left.name.localeCompare(right.name, 'he')));
+    setIsLoading(true);
+    try {
+      const branchList = await getBranches();
+      setBranches(branchList.sort((left, right) => left.name.localeCompare(right.name, 'he')));
+    } catch (error) {
+      console.error(error);
+      alert('טעינת הענפים נכשלה.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser || currentUser.role !== 'guide') {
+    if (!guideUser) {
       navigate('/');
       return;
     }
 
     void fetchBranches();
-  }, [fetchBranches, navigate]);
+  }, [fetchBranches, guideUser, navigate]);
 
   const handleAdd = async () => {
     if (!newBranch.name.trim() || !newBranch.password.trim()) {
@@ -74,6 +84,10 @@ const ManageBranches = () => {
     setGuidePassword('');
     alert('סיסמת המדריך עודכנה.');
   };
+
+  if (!guideUser || isLoading) {
+    return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
+  }
 
   return (
     <div className="app-shell" dir="rtl">

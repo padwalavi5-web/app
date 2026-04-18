@@ -5,8 +5,11 @@
   doc,
   getDoc,
   getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import { db } from './firebase';
@@ -113,6 +116,18 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
 
 export const updateYouth = async (youthId: string, updates: Partial<Youth>) => {
   await updateDoc(doc(db, 'youth', youthId), updates);
+};
+
+export const deleteYouth = async (youthId: string) => {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'youth', youthId));
+
+  const relatedReports = await getDocs(query(collection(db, 'reports'), where('youthId', '==', youthId)));
+  relatedReports.docs.forEach((reportDoc) => {
+    batch.delete(reportDoc.ref);
+  });
+
+  await batch.commit();
 };
 
 export const resetPaidHours = async (youthId: string, currentTotal: number) => {

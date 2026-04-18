@@ -1,8 +1,9 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiClock, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiFileText, FiX } from 'react-icons/fi';
 import { getCurrentUser, getReports, updateReport } from '../data';
 import type { CurrentUser, Report } from '../types';
+import AppMark from './AppMark';
 
 const ManagerApproval = () => {
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -71,17 +72,63 @@ const ManagerApproval = () => {
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-5xl space-y-6">
-        <section className="glass-panel p-6 sm:p-8">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="chip mb-3">אישור שעות</div>
-              <h1 className="page-title mb-2">ענף {user.branch}</h1>
-              <p className="page-subtitle">כל הדיווחים שממתינים לאישור מרוכזים כאן עם פעולה מהירה ונוחה.</p>
+      <div className="page-wrap max-w-6xl space-y-6">
+        <section className="glass-panel p-6 sm:p-8 lg:p-10">
+          <div className="hero-grid items-start">
+            <div className="space-y-5">
+              <div className="flex items-center gap-4">
+                <AppMark compact />
+                <div>
+                  <div className="chip mb-3">מרכז אישורי ענף</div>
+                  <h1 className="page-title mb-2">ענף {user.branch}</h1>
+                  <p className="page-subtitle">כל הדיווחים שממתינים לאישור מרוכזים כאן, עם צפייה מהירה ושתי פעולות ברורות: אישור או דחייה.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="stat-card">
+                  <div className="page-subtitle">ממתינים כרגע</div>
+                  <div className="stat-value">{reports.length}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="page-subtitle">סטטוס עבודה</div>
+                  <div className="stat-value">פעיל</div>
+                </div>
+                <div className="stat-card">
+                  <div className="page-subtitle">סוג מסך</div>
+                  <div className="stat-value">אישורים</div>
+                </div>
+              </div>
             </div>
-            <div className="content-card px-4 py-3 text-sm">
-              <div className="font-semibold">{reports.length} דיווחים ממתינים</div>
-              <div className="page-subtitle">המסך מתעדכן מול Firebase</div>
+
+            <div className="content-card p-6">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="section-title">הנחיה מהירה</h2>
+                  <p className="page-subtitle">אשר רק דיווחים תקינים. אם חסר פירוט, דחה עם סיבה קצרה וברורה.</p>
+                </div>
+                <div className="icon-badge">
+                  <FiFileText size={18} />
+                </div>
+              </div>
+              <div className="space-y-3 text-sm text-slate-600">
+                <div className="rounded-3xl bg-slate-50/90 p-4">דיווח על ענף "אחר" אמור לכלול פירוט עבודה.</div>
+                <div className="rounded-3xl bg-slate-50/90 p-4">שעות לא הגיוניות או טווחי זמן שגויים לא כדאי לאשר.</div>
+                <div className="rounded-3xl bg-slate-50/90 p-4">דחייה נשמרת עם הערה כדי שלמדריך יהיה קל להבין מה קרה.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="section-title">דיווחים ממתינים</h2>
+              <p className="page-subtitle">תצוגת כרטיסים נוחה לאישור מהיר.</p>
+            </div>
+            <div className="chip chip-warm">
+              <FiClock size={12} />
+              {reports.length} ממתינים
             </div>
           </div>
 
@@ -104,6 +151,7 @@ const ManagerApproval = () => {
                     </div>
                   </div>
 
+                  <div className="mb-3 text-sm text-slate-500">ענף: {report.branch}</div>
                   {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-4 text-sm">{report.details}</div>}
 
                   <div className="flex gap-2">

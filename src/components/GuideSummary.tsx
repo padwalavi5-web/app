@@ -1,15 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  FiDownload,
-  FiLayers,
-  FiRefreshCw,
-  FiSettings,
-  FiTrendingUp,
-  FiUsers,
-} from 'react-icons/fi';
-import { getRates, getReports, getYouth, resetPaidHours } from '../data';
-import type { HourlyRate, Report, Youth } from '../types';
+import { FiDownload, FiLayers, FiLogOut, FiRefreshCw, FiSettings, FiTrendingUp, FiUsers } from 'react-icons/fi';
+import { getCurrentUser, getRates, getReports, getYouth, logout, resetPaidHours } from '../data';
+import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
 import AppMark from './AppMark';
 
@@ -20,6 +13,8 @@ const GuideSummary = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
+  const currentUser = getCurrentUser() as CurrentUser | null;
+  const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -30,22 +25,28 @@ const GuideSummary = () => {
       setRates(ratesResponse);
     } catch (error) {
       console.error(error);
+      alert('טעינת נתוני המדריך נכשלה. נסה שוב.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    if (!guideUser) {
+      navigate('/');
+      return;
+    }
+
     void fetchData();
-  }, [fetchData]);
+  }, [fetchData, guideUser, navigate]);
 
   const summaryRows = useMemo(
     () => youthList.map((youth) => ({ youth, summary: buildYouthWorkSummary(youth, reports, rates) })),
     [youthList, reports, rates],
   );
 
-  const totals = useMemo(() => {
-    return summaryRows.reduce(
+  const totals = useMemo(
+    () => summaryRows.reduce(
       (accumulator, row) => {
         accumulator.pendingHours += row.summary.payablePendingHours;
         accumulator.pendingAmount += row.summary.payablePendingAmount;
@@ -53,14 +54,16 @@ const GuideSummary = () => {
         return accumulator;
       },
       { pendingHours: 0, pendingAmount: 0, approvedHours: 0 },
-    );
-  }, [summaryRows]);
+    ),
+    [summaryRows],
+  );
 
   const exportCsv = () => {
+    const escapeValue = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
     const csvContent =
       '\uFEFF' +
       [
-        ['שם', 'מספר תקציב', 'שעות לתשלום', 'תיקון ידני', 'סכום לתשלום'].join(','),
+        ['שם', 'מספר תקציב', 'שעות לתשלום', 'תיקון ידני', 'סכום לתשלום'].map(escapeValue).join(','),
         ...summaryRows.map((row) =>
           [
             row.youth.name,
@@ -68,16 +71,17 @@ const GuideSummary = () => {
             row.summary.payablePendingHours.toFixed(1),
             row.summary.manualAdjustmentHours.toFixed(1),
             row.summary.payablePendingAmount.toFixed(2),
-          ].join(','),
+          ].map(escapeValue).join(','),
         ),
       ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `guide-summary-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    URL.revokeObjectURL(link.href);
+    URL.revokeObjectURL(url);
   };
 
   const handleExportAndReset = async () => {
@@ -94,9 +98,7 @@ const GuideSummary = () => {
     setIsExporting(true);
     try {
       exportCsv();
-      await Promise.all(
-        summaryRows.map((row) => resetPaidHours(row.youth.id, row.summary.payableCumulativeHours)),
-      );
+      await Promise.all(summaryRows.map((row) => resetPaidHours(row.youth.id, row.summary.payableCumulativeHours)));
       await fetchData();
       alert('הקובץ יוצא והאיפוס הושלם בהצלחה.');
     } catch (error) {
@@ -107,7 +109,7 @@ const GuideSummary = () => {
     }
   };
 
-  if (isLoading) {
+  if (!guideUser || isLoading) {
     return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען נתונים...</div>;
   }
 
@@ -122,9 +124,7 @@ const GuideSummary = () => {
                 <div>
                   <div className="chip mb-3">מרכז בקרה למדריך</div>
                   <h1 className="page-title mb-2">סיכום מדריך וניהול תשלומים</h1>
-                  <p className="page-subtitle">
-                    מבט מרוכז על שעות לתשלום, תיקונים ידניים, ופעולת ייצוא ואיפוס מאוחדת בלחיצה אחת.
-                  </p>
+                  <p className="page-subtitle">מבט מרוכז על שעות לתשלום, תיקונים ידניים, ופעולת ייצוא ואיפוס מאוחדת בלחיצה אחת.</p>
                 </div>
               </div>
 
@@ -181,14 +181,20 @@ const GuideSummary = () => {
                   ניהול תעריפים
                   <FiTrendingUp size={18} />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleExportAndReset}
-                  className="btn-primary mt-4 w-full justify-between"
-                  disabled={isExporting}
-                >
+                <button type="button" onClick={handleExportAndReset} className="btn-primary mt-4 w-full justify-between" disabled={isExporting}>
                   {isExporting ? 'מייצא ומאפס...' : 'ייצוא לאקסל + איפוס'}
                   <FiDownload size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                  }}
+                  className="btn-secondary w-full justify-between"
+                >
+                  התנתק
+                  <FiLogOut size={18} />
                 </button>
               </div>
             </div>

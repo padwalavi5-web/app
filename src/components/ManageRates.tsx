@@ -1,38 +1,50 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight, FiEdit3, FiPlus, FiSave, FiTrash2 } from 'react-icons/fi';
-import { addRate, deleteRate, getRates, updateRate } from '../data';
-import type { HourlyRate } from '../types';
+import { addRate, getCurrentUser, deleteRate, getRates, updateRate } from '../data';
+import type { CurrentUser, HourlyRate } from '../types';
 
 const ManageRates = () => {
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [newRate, setNewRate] = useState({ age: '', rate: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState({ age: '', rate: '' });
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const currentUser = getCurrentUser() as CurrentUser | null;
+  const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const loadRates = useCallback(async () => {
+    setIsLoading(true);
     try {
       const data = await getRates();
       setRates(data.sort((a, b) => a.age - b.age));
     } catch (error) {
       console.error('Failed to load rates:', error);
+      alert('טעינת התעריפים נכשלה.');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadRates();
-  }, [loadRates]);
-
-  const handleAdd = async () => {
-    if (!newRate.age || !newRate.rate) {
+    if (!guideUser) {
+      navigate('/');
       return;
     }
 
-    await addRate({
-      age: parseInt(newRate.age, 10),
-      rate: parseFloat(newRate.rate),
-    });
+    void loadRates();
+  }, [guideUser, loadRates, navigate]);
+
+  const handleAdd = async () => {
+    const parsedAge = parseInt(newRate.age, 10);
+    const parsedRate = parseFloat(newRate.rate);
+    if (!Number.isFinite(parsedAge) || !Number.isFinite(parsedRate)) {
+      alert('צריך להזין גיל ותעריף תקינים.');
+      return;
+    }
+
+    await addRate({ age: parsedAge, rate: parsedRate });
     setNewRate({ age: '', rate: '' });
     await loadRates();
   };
@@ -57,11 +69,15 @@ const ManageRates = () => {
   };
 
   const saveEdit = async (id: string) => {
+    const parsedAge = parseInt(editValue.age, 10);
+    const parsedRate = parseFloat(editValue.rate);
+    if (!Number.isFinite(parsedAge) || !Number.isFinite(parsedRate)) {
+      alert('צריך להזין גיל ותעריף תקינים.');
+      return;
+    }
+
     try {
-      await updateRate(id, {
-        age: parseInt(editValue.age, 10),
-        rate: parseFloat(editValue.rate),
-      });
+      await updateRate(id, { age: parsedAge, rate: parsedRate });
       setEditingId(null);
       await loadRates();
     } catch (error) {
@@ -69,6 +85,10 @@ const ManageRates = () => {
       alert('שגיאה בעדכון התעריף.');
     }
   };
+
+  if (!guideUser || isLoading) {
+    return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
+  }
 
   return (
     <div className="app-shell" dir="rtl">
