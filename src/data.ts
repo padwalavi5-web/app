@@ -134,6 +134,26 @@ export const resetPaidHours = async (youthId: string, currentTotal: number) => {
   await updateDoc(doc(db, 'youth', youthId), { lastResetHours: Number(currentTotal) });
 };
 
+// --- פונקציה חדשה לעדכון אטומי של הנתונים ---
+export const finalizePaymentCycle = async (
+  youthUpdates: { youthId: string; lastResetHours: number }[],
+  reportIds: string[]
+) => {
+  const batch = writeBatch(db);
+
+  youthUpdates.forEach((update) => {
+    const youthRef = doc(db, 'youth', update.youthId);
+    batch.update(youthRef, { lastResetHours: update.lastResetHours });
+  });
+
+  reportIds.forEach((id) => {
+    const reportRef = doc(db, 'reports', id);
+    batch.update(reportRef, { status: 'paid' }); // מסמן את הדיווחים כ"שולמו"
+  });
+
+  await batch.commit();
+};
+
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await getDocs(collection(db, 'rates'));
   return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() }) as HourlyRate);

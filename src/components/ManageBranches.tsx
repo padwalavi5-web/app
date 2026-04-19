@@ -42,7 +42,6 @@ const ManageBranches = () => {
       navigate('/');
       return;
     }
-
     void fetchBranches();
   }, [fetchBranches, guideUser, navigate]);
 
@@ -147,7 +146,7 @@ const ManageBranches = () => {
                   <span className="icon-badge"><FiKey size={18} /></span>
                   <div>
                     <h2 className="section-title">סיסמת מדריך</h2>
-                    <p className="page-subtitle">אפשר לעדכן כאן את סיסמת המדריך הראשית של המערכת.</p>
+                    <p className="page-subtitle">עדכון סיסמת המדריך הראשית של המערכת.</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -231,7 +230,6 @@ const ManageBranches = () => {
                             if (!window.confirm(`למחוק את ענף ${branch.name}?`)) {
                               return;
                             }
-
                             await deleteBranch(branch.name);
                             await fetchBranches();
                           }}

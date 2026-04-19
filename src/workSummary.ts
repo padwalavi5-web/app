@@ -44,6 +44,8 @@ export const buildYouthWorkSummary = (
   rates: HourlyRate[],
   referenceDate = new Date(),
 ): YouthWorkSummary => {
+  // כאן הקסם: אנחנו מסננים רק דיווחים שהם 'approved'.
+  // ברגע שנשנה סטטוס ל-'paid', הם יסוננו החוצה אוטומטית.
   const approvedReports = reports
     .filter((report) => report.youthId === youth.id && report.status === 'approved')
     .slice()
@@ -80,8 +82,10 @@ export const buildYouthWorkSummary = (
   const effectiveCycleHours = Math.max(0, cycleApprovedHours + manualAdjustmentHours);
   const effectiveMandatoryHours = Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours);
   const effectivePayableHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
-  const hourlyRate = getYouthRate(youth, rates);
+  
+  // החישוב מתבסס על השעות המצטברות פחות מה שכבר שולם (lastResetHours)
   const payablePendingHours = Math.max(0, effectivePayableHours - Number(youth.lastResetHours ?? 0));
+  const hourlyRate = getYouthRate(youth, rates);
 
   return {
     cycleApprovedHours: effectiveCycleHours,

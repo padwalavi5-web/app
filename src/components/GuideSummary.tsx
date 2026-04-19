@@ -1,18 +1,19 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiDownload, FiLayers, FiLogOut, FiRefreshCw, FiTrendingUp, FiUsers } from 'react-icons/fi';
-import { getCurrentUser, getRates, getReports, getYouth, logout, resetPaidHours } from '../data';
-import type { CurrentUser, HourlyRate, Youth } from '../types';
+import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
+import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
 
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [loadError, setLoadError] = useState('');
   const navigate = useNavigate();
+  
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
@@ -20,7 +21,11 @@ const GuideSummary = () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const [youthResponse, reportsResponse, ratesResponse] = await Promise.all([getYouth(), getReports(), getRates()]);
+      const [youthResponse, reportsResponse, ratesResponse] = await Promise.all([
+        getYouth(), 
+        getReports(), 
+        getRates()
+      ]);
       setYouthList(youthResponse);
       setReports(reportsResponse);
       setRates(ratesResponse);
@@ -37,12 +42,14 @@ const GuideSummary = () => {
       navigate('/');
       return;
     }
-
     void fetchData();
   }, [fetchData, guideUser, navigate]);
 
   const summaryRows = useMemo(
-    () => youthList.map((youth) => ({ youth, summary: buildYouthWorkSummary(youth, reports, rates) })),
+    () => youthList.map((youth) => ({ 
+      youth, 
+      summary: buildYouthWorkSummary(youth, reports, rates) 
+    })),
     [youthList, reports, rates],
   );
 
@@ -91,15 +98,26 @@ const GuideSummary = () => {
       return;
     }
 
-    if (!window.confirm('לייצא ולאפס?')) {
+    if (!window.confirm('לייצא ולאפס את השעות לתשלום? פעולה זו תסמן את הדיווחים המאושרים כ"שולמו".')) {
       return;
     }
 
     setIsExporting(true);
     try {
       exportCsv();
-      await Promise.all(summaryRows.map((row) => resetPaidHours(row.youth.id, row.summary.payableCumulativeHours)));
+
+      const youthUpdates = summaryRows.map((row) => ({
+        youthId: row.youth.id,
+        lastResetHours: row.summary.payableCumulativeHours,
+      }));
+
+      const paidReportIds = reports
+        .filter((r) => r.status === 'approved')
+        .map((r) => r.id);
+
+      await finalizePaymentCycle(youthUpdates, paidReportIds);
       await fetchData();
+      alert('הייצוא בוצע והנתונים אופסו בהצלחה.');
     } catch (error) {
       console.error(error);
       alert('הפעולה נכשלה.');
@@ -121,13 +139,11 @@ const GuideSummary = () => {
               <div className="chip mb-2">מדריך</div>
               <h1 className="page-title">סיכום</h1>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                logout();
-                navigate('/');
-              }}
+            <button 
+              type="button" 
+              onClick={() => { logout(); navigate('/'); }} 
               className="btn-secondary"
+              aria-label="התנתקות"
             >
               <FiLogOut size={18} />
             </button>
@@ -137,31 +153,19 @@ const GuideSummary = () => {
 
           <div className="metric-grid">
             <div className="stat-card compact-card">
-              <div className="flex items-center justify-between">
-                <span className="page-subtitle">נערים</span>
-                <span className="icon-badge"><FiUsers size={18} /></span>
-              </div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">נערים</span><span className="icon-badge"><FiUsers size={18} /></span></div>
               <div className="stat-value">{summaryRows.length}</div>
             </div>
             <div className="stat-card compact-card">
-              <div className="flex items-center justify-between">
-                <span className="page-subtitle">לתשלום</span>
-                <span className="icon-badge"><FiTrendingUp size={18} /></span>
-              </div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">לתשלום</span><span className="icon-badge"><FiTrendingUp size={18} /></span></div>
               <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
             </div>
             <div className="stat-card compact-card">
-              <div className="flex items-center justify-between">
-                <span className="page-subtitle">סכום</span>
-                <span className="icon-badge"><FiLayers size={18} /></span>
-              </div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">סכום</span><span className="icon-badge"><FiLayers size={18} /></span></div>
               <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
             </div>
             <div className="stat-card compact-card">
-              <div className="flex items-center justify-between">
-                <span className="page-subtitle">מחזור</span>
-                <span className="icon-badge"><FiRefreshCw size={18} /></span>
-              </div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">מחזור</span><span className="icon-badge"><FiRefreshCw size={18} /></span></div>
               <div className="stat-value">{totals.approvedHours.toFixed(1)}</div>
             </div>
           </div>
@@ -179,21 +183,11 @@ const GuideSummary = () => {
           </div>
 
           {summaryRows.length === 0 ? (
-            <div className="empty-state py-6">
-              <p className="page-subtitle">אין נתונים</p>
-            </div>
+            <div className="empty-state py-6"><p className="page-subtitle">אין נתונים</p></div>
           ) : (
             <div className="table-shell">
               <table>
-                <thead>
-                  <tr>
-                    <th>שם</th>
-                    <th>תקציב</th>
-                    <th>שעות</th>
-                    <th>ידני</th>
-                    <th>סכום</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>שם</th><th>תקציב</th><th>שעות</th><th>ידני</th><th>סכום</th></tr></thead>
                 <tbody>
                   {summaryRows.map((row) => (
                     <tr key={row.youth.id}>
