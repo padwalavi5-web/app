@@ -26,9 +26,9 @@ const GuideSummary = () => {
         getReports(), 
         getRates()
       ]);
-      setYouthList(youthResponse);
-      setReports(reportsResponse);
-      setRates(ratesResponse);
+      setYouthList(youthResponse || []);
+      setReports(reportsResponse || []);
+      setRates(ratesResponse || []);
     } catch (error) {
       console.error(error);
       setLoadError('טעינת הנתונים נכשלה');
@@ -93,34 +93,42 @@ const GuideSummary = () => {
   };
 
   const handleExportAndReset = async () => {
+    // 1. בדיקה: האם יש נתונים
     if (!summaryRows.length) {
       alert('אין נתונים לייצוא.');
       return;
     }
 
-    if (!window.confirm('לייצא ולאפס את השעות לתשלום? פעולה זו תסמן את הדיווחים המאושרים כ"שולמו".')) {
+    // 2. סינון והכנת הנתונים (מניעת נתונים ריקים/לא תקינים)
+    const youthUpdates = summaryRows
+      .filter((row): row is (typeof summaryRows)[number] & { youth: Youth & { id: string } } => Boolean(row.youth.id))
+      .map((row) => ({
+        youthId: row.youth.id,
+        lastResetHours: row.summary.payableCumulativeHours,
+      }));
+
+    const paidReportIds = reports
+      .filter((r): r is Report & { id: string } => r.status === 'approved' && Boolean(r.id))
+      .map((r) => r.id);
+
+    if (youthUpdates.length === 0 || paidReportIds.length === 0) {
+      alert('אין נתונים תקינים לעדכון (ייתכן שאין דיווחים מאושרים).');
+      return;
+    }
+
+    if (!window.confirm('לייצא ולאפס את השעות לתשלום?')) {
       return;
     }
 
     setIsExporting(true);
     try {
       exportCsv();
-
-      const youthUpdates = summaryRows.map((row) => ({
-        youthId: row.youth.id,
-        lastResetHours: row.summary.payableCumulativeHours,
-      }));
-
-      const paidReportIds = reports
-        .filter((r) => r.status === 'approved')
-        .map((r) => r.id);
-
       await finalizePaymentCycle(youthUpdates, paidReportIds);
       await fetchData();
       alert('הייצוא בוצע והנתונים אופסו בהצלחה.');
     } catch (error) {
-      console.error(error);
-      alert('הפעולה נכשלה.');
+      console.error("Firebase Error:", error);
+      alert('הפעולה נכשלה. ייתכן שאין הרשאות או שהפרויקט לא מוגדר נכון.');
     } finally {
       setIsExporting(false);
     }

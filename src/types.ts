@@ -22,7 +22,7 @@ export interface Report {
   endTime: string;
   totalHours: number;
   approvalTarget?: 'manager' | 'guide';
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'paid';
   reviewNote?: string;
 }
 

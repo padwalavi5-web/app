@@ -49,7 +49,12 @@ const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Repor
   endTime: String(reportDoc?.endTime ?? ''),
   totalHours: Number(reportDoc?.totalHours ?? 0),
   approvalTarget: reportDoc?.approvalTarget === 'guide' ? 'guide' : 'manager',
-  status: reportDoc?.status === 'approved' || reportDoc?.status === 'rejected' ? reportDoc.status : 'pending',
+  status:
+    reportDoc?.status === 'approved' ||
+    reportDoc?.status === 'rejected' ||
+    reportDoc?.status === 'paid'
+      ? reportDoc.status
+      : 'pending',
   reviewNote: String(reportDoc?.reviewNote ?? ''),
 });
 

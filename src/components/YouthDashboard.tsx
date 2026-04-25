@@ -14,12 +14,14 @@ const statusLabels: Record<Report['status'], string> = {
   pending: 'ממתין',
   approved: 'אושר',
   rejected: 'נדחה',
+  paid: 'שולם',
 };
 
 const statusClasses: Record<Report['status'], string> = {
   pending: 'chip',
   approved: 'chip bg-[rgba(21,128,61,0.12)] text-[var(--success)] border-[rgba(21,128,61,0.12)]',
   rejected: 'chip chip-danger',
+  paid: 'chip bg-[rgba(14,116,144,0.12)] text-cyan-700 border-[rgba(14,116,144,0.12)]',
 };
 
 const YouthDashboard = () => {
