@@ -79,22 +79,19 @@ export const buildYouthWorkSummary = (
   }
 
   const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
-  const effectiveCycleHours = Math.max(0, cycleApprovedHours + manualAdjustmentHours);
-  const effectiveMandatoryHours = Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours);
-  const effectivePayableHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
-  
-  // החישוב מתבסס על השעות המצטברות פחות מה שכבר שולם (lastResetHours)
-  const payablePendingHours = Math.max(0, effectivePayableHours - Number(youth.lastResetHours ?? 0));
+  const payableHoursFromReports = Math.max(0, cycleApprovedHours - MANDATORY_HOURS_LIMIT);
+  const payableCumulativeHours = Math.max(0, payableHoursFromReports + manualAdjustmentHours);
+  const payablePendingHours = Math.max(0, payableCumulativeHours - Number(youth.lastResetHours ?? 0));
   const hourlyRate = getYouthRate(youth, rates);
 
   return {
-    cycleApprovedHours: effectiveCycleHours,
-    mandatoryCompletedHours: effectiveMandatoryHours,
-    payableCumulativeHours: effectivePayableHours,
+    cycleApprovedHours,
+    mandatoryCompletedHours: Math.min(MANDATORY_HOURS_LIMIT, cycleApprovedHours),
+    payableCumulativeHours,
     payablePendingHours,
     currentMonthHours,
     payablePendingAmount: payablePendingHours * hourlyRate,
-    totalEarnedAmount: effectivePayableHours * hourlyRate,
+    totalEarnedAmount: payableCumulativeHours * hourlyRate,
     manualAdjustmentHours,
   };
 };

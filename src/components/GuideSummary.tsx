@@ -71,13 +71,12 @@ const GuideSummary = () => {
     const csvContent =
       '\uFEFF' +
       [
-        ['שם', 'מספר תקציב', 'שעות לתשלום', 'תיקון ידני', 'סכום לתשלום'].map(escapeValue).join(','),
+        ['שם', 'מספר תקציב', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
         ...summaryRows.map((row) =>
           [
             row.youth.name,
             row.youth.personalBudgetNumber,
             row.summary.payablePendingHours.toFixed(1),
-            row.summary.manualAdjustmentHours.toFixed(1),
             row.summary.payablePendingAmount.toFixed(2),
           ].map(escapeValue).join(','),
         ),
@@ -205,14 +204,13 @@ const GuideSummary = () => {
           ) : (
             <div className="table-shell">
               <table>
-                <thead><tr><th>שם</th><th>תקציב</th><th>שעות</th><th>ידני</th><th>סכום</th></tr></thead>
+                <thead><tr><th>שם</th><th>תקציב</th><th>שעות</th><th>סכום</th></tr></thead>
                 <tbody>
                   {summaryRows.map((row) => (
                     <tr key={row.youth.id}>
                       <td className="font-semibold">{row.youth.name}</td>
                       <td>{row.youth.personalBudgetNumber}</td>
                       <td>{row.summary.payablePendingHours.toFixed(1)}</td>
-                      <td>{row.summary.manualAdjustmentHours.toFixed(1)}</td>
                       <td className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</td>
                     </tr>
                   ))}
