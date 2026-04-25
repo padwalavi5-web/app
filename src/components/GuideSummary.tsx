@@ -171,19 +171,19 @@ const GuideSummary = () => {
           ) : null}
 
           <div className="metric-grid compact-grid">
-            <div className="stat-card compact-card">
+            <div className="stat-card stat-card-olive compact-card">
               <div className="flex items-center justify-between"><span className="page-subtitle">נערים</span><span className="icon-badge"><FiUsers size={18} /></span></div>
               <div className="stat-value">{summaryRows.length}</div>
             </div>
-            <div className="stat-card compact-card">
+            <div className="stat-card stat-card-sky compact-card">
               <div className="flex items-center justify-between"><span className="page-subtitle">לתשלום</span><span className="icon-badge"><FiTrendingUp size={18} /></span></div>
               <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
             </div>
-            <div className="stat-card compact-card">
+            <div className="stat-card stat-card-sand compact-card">
               <div className="flex items-center justify-between"><span className="page-subtitle">סכום</span><span className="icon-badge">₪</span></div>
               <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
             </div>
-            <div className="stat-card compact-card">
+            <div className="stat-card stat-card-rose compact-card">
               <div className="flex items-center justify-between"><span className="page-subtitle">מחזור</span><span className="icon-badge"><FiRefreshCw size={18} /></span></div>
               <div className="stat-value">{totals.approvedHours.toFixed(1)}</div>
             </div>

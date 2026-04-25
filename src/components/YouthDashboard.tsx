@@ -207,28 +207,28 @@ const YouthDashboard = () => {
 
           {summary && (
             <div className="metric-grid compact-grid">
-              <div className="stat-card compact-card">
+              <div className="stat-card stat-card-olive compact-card">
                 <div className="flex items-center justify-between">
                   <span className="page-subtitle">מחזור</span>
                   <span className="icon-badge"><FiTrendingUp size={18} /></span>
                 </div>
                 <div className="stat-value">{summary.cycleApprovedHours.toFixed(1)}</div>
               </div>
-              <div className="stat-card compact-card">
+              <div className="stat-card stat-card-sky compact-card">
                 <div className="flex items-center justify-between">
                   <span className="page-subtitle">לתשלום</span>
                   <span className="icon-badge"><FiClock size={18} /></span>
                 </div>
                 <div className="stat-value">{summary.payablePendingHours.toFixed(1)}</div>
               </div>
-              <div className="stat-card compact-card">
+              <div className="stat-card stat-card-sand compact-card">
                 <div className="flex items-center justify-between">
                   <span className="page-subtitle">סכום</span>
                   <span className="icon-badge">₪</span>
                 </div>
                 <div className="stat-value">₪{summary.payablePendingAmount.toFixed(0)}</div>
               </div>
-              <div className="stat-card compact-card">
+              <div className="stat-card stat-card-rose compact-card">
                 <div className="flex items-center justify-between">
                   <span className="page-subtitle">חובה</span>
                   <span className="icon-badge"><FiCalendar size={18} /></span>
@@ -274,7 +274,7 @@ const YouthDashboard = () => {
 
       {isReportFormOpen && (
         <div className="modal-backdrop" dir="rtl">
-          <div className="content-card w-full max-w-xl p-6">
+          <div className="modal-panel max-w-xl">
             <div className="mb-5 flex items-center justify-between gap-4">
               <h2 className="section-title">דיווח שעות</h2>
               <button type="button" onClick={() => setIsReportFormOpen(false)} className="btn-secondary px-3 py-2">

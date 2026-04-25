@@ -153,7 +153,7 @@ const ManagerApproval = () => {
 
       {selectedReport && (
         <div className="modal-backdrop" dir="rtl">
-          <div className="content-card w-full max-w-md p-6">
+          <div className="modal-panel max-w-md">
             <div className="mb-4">
               <div className="chip chip-danger mb-3">דחייה</div>
               <h2 className="section-title">סיבה</h2>

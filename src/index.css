@@ -219,6 +219,22 @@ textarea {
     @apply rounded-[22px] p-4;
   }
 
+  .stat-card-olive {
+    background: linear-gradient(180deg, rgba(234, 244, 238, 0.94), rgba(248, 246, 242, 0.9));
+  }
+
+  .stat-card-sky {
+    background: linear-gradient(180deg, rgba(236, 241, 251, 0.94), rgba(248, 246, 242, 0.9));
+  }
+
+  .stat-card-sand {
+    background: linear-gradient(180deg, rgba(248, 239, 227, 0.94), rgba(248, 246, 242, 0.9));
+  }
+
+  .stat-card-rose {
+    background: linear-gradient(180deg, rgba(246, 237, 238, 0.94), rgba(248, 246, 242, 0.9));
+  }
+
   .compact-card .stat-value {
     @apply mt-2 text-2xl;
   }
@@ -260,7 +276,22 @@ textarea {
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm;
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(34, 43, 53, 0.34);
+    isolation: isolate;
+    overscroll-behavior: contain;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  .modal-panel {
+    background: rgba(255, 255, 255, 0.985);
+    border: 1px solid rgba(124, 134, 145, 0.16);
+    box-shadow: 0 20px 40px rgba(27, 37, 46, 0.16);
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    @apply w-full rounded-[22px] p-6;
   }
 
   .segmented {
