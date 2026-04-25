@@ -12,12 +12,17 @@ const ManageYouth = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Youth>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const currentUser = getCurrentUser() as CurrentUser | null;
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
-  const fetchYouthData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchYouthData = useCallback(async (showLoader = false) => {
+    if (showLoader) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
       const [youthData, reportData, rateData] = await Promise.all([getYouth(), getReports(), getRates()]);
       setYouth(youthData);
@@ -28,6 +33,7 @@ const ManageYouth = () => {
       alert('טעינת נתוני הנוער נכשלה.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -37,7 +43,7 @@ const ManageYouth = () => {
       return;
     }
 
-    void fetchYouthData();
+    void fetchYouthData(true);
   }, [fetchYouthData, guideUser, navigate]);
 
   const summaryById = useMemo(
@@ -102,10 +108,13 @@ const ManageYouth = () => {
               <div className="chip mb-3">ניהול נוער</div>
               <h1 className="page-title mb-0">נוער</h1>
             </div>
-            <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
-              <FiArrowRight size={18} />
-              חזור לסיכום
-            </button>
+            <div className="toolbar">
+              {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
+              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+                <FiArrowRight size={18} />
+                חזור לסיכום
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -113,7 +122,7 @@ const ManageYouth = () => {
               const summary = summaryById.get(youthItem.id);
 
               return (
-                <div key={youthItem.id} className="plain-card p-5">
+                <div key={youthItem.id} className="plain-card plain-card-olive p-5">
                   {editingId === youthItem.id ? (
                     <div className="space-y-4">
                       <div>
@@ -188,15 +197,15 @@ const ManageYouth = () => {
                       </div>
 
                       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                        <div className="rounded-3xl bg-[rgba(230,244,236,0.9)] p-4">
                           <div className="text-xs text-slate-500">שעות במחזור</div>
                           <div className="mt-2 text-xl font-semibold">{summary?.cycleApprovedHours.toFixed(1) ?? '0.0'}</div>
                         </div>
-                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                        <div className="rounded-3xl bg-[rgba(236,241,251,0.9)] p-4">
                           <div className="text-xs text-slate-500">תיקון ידני</div>
                           <div className="mt-2 text-xl font-semibold">{Number(youthItem.manualHoursAdjustment ?? 0).toFixed(1)}</div>
                         </div>
-                        <div className="rounded-3xl bg-slate-50/90 p-4">
+                        <div className="rounded-3xl bg-[rgba(248,239,227,0.9)] p-4">
                           <div className="text-xs text-slate-500">שעות חובה</div>
                           <div className="mt-2 text-xl font-semibold">{summary?.mandatoryCompletedHours.toFixed(1) ?? '0.0'}</div>
                         </div>

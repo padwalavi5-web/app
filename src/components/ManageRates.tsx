@@ -10,12 +10,17 @@ const ManageRates = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState({ age: '', rate: '' });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const currentUser = getCurrentUser() as CurrentUser | null;
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
-  const loadRates = useCallback(async () => {
-    setIsLoading(true);
+  const loadRates = useCallback(async (showLoader = false) => {
+    if (showLoader) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
       const data = await getRates();
       setRates(data.sort((a, b) => a.age - b.age));
@@ -24,6 +29,7 @@ const ManageRates = () => {
       alert('טעינת התעריפים נכשלה.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -33,7 +39,7 @@ const ManageRates = () => {
       return;
     }
 
-    void loadRates();
+    void loadRates(true);
   }, [guideUser, loadRates, navigate]);
 
   const handleAdd = async () => {
@@ -103,14 +109,17 @@ const ManageRates = () => {
               <div className="chip mb-3">תמחור</div>
               <h1 className="page-title mb-0">תעריפים</h1>
             </div>
-            <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
-              <FiArrowRight size={18} />
-              חזור לסיכום
-            </button>
+            <div className="toolbar">
+              {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
+              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+                <FiArrowRight size={18} />
+                חזור לסיכום
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="plain-card p-6 h-fit">
+            <div className="plain-card plain-card-sand p-6 h-fit">
               <div className="mb-4 flex items-center gap-3">
                 <span className="icon-badge"><FiPlus size={18} /></span>
                 <div>
@@ -148,7 +157,7 @@ const ManageRates = () => {
 
             <div className="grid gap-4 sm:grid-cols-2">
               {rates.map((rate) => (
-                <div key={rate.id} className="plain-card p-5">
+                <div key={rate.id} className="plain-card plain-card-rose p-5">
                   {editingId === rate.id ? (
                     <div className="space-y-3">
                       <div>

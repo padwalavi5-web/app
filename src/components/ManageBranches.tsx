@@ -20,12 +20,17 @@ const ManageBranches = () => {
   const [editingPassword, setEditingPassword] = useState('');
   const [guidePassword, setGuidePassword] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const currentUser = getCurrentUser() as CurrentUser | null;
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
-  const fetchBranches = useCallback(async () => {
-    setIsLoading(true);
+  const fetchBranches = useCallback(async (showLoader = false) => {
+    if (showLoader) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
       const branchList = await getBranches();
       setBranches(branchList.sort((left, right) => left.name.localeCompare(right.name, 'he')));
@@ -34,6 +39,7 @@ const ManageBranches = () => {
       alert('טעינת הענפים נכשלה.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -42,7 +48,7 @@ const ManageBranches = () => {
       navigate('/');
       return;
     }
-    void fetchBranches();
+    void fetchBranches(true);
   }, [fetchBranches, guideUser, navigate]);
 
   const handleAdd = async () => {
@@ -101,15 +107,18 @@ const ManageBranches = () => {
               <div className="chip mb-3">ענפים</div>
               <h1 className="page-title mb-0">ניהול ענפים</h1>
             </div>
-            <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
-              <FiArrowRight size={18} />
-              חזור לסיכום
-            </button>
+            <div className="toolbar">
+              {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
+              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+                <FiArrowRight size={18} />
+                חזור לסיכום
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-6">
-              <div className="plain-card p-6">
+              <div className="plain-card plain-card-sand p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="icon-badge"><FiPlus size={18} /></span>
                   <div>
@@ -143,7 +152,7 @@ const ManageBranches = () => {
                 </div>
               </div>
 
-              <div className="plain-card p-6">
+              <div className="plain-card plain-card-sky p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="icon-badge"><FiKey size={18} /></span>
                   <div>
@@ -176,7 +185,7 @@ const ManageBranches = () => {
                 </div>
               ) : (
                 branches.map((branch) => (
-                  <div key={branch.name} className="plain-card p-5">
+                  <div key={branch.name} className="plain-card plain-card-olive p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <div className="chip mb-2">ענף פעיל</div>
