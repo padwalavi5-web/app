@@ -117,6 +117,20 @@ textarea {
     @apply rounded-[22px];
   }
 
+  .plain-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(124, 134, 145, 0.14);
+    box-shadow: 0 12px 26px rgba(43, 53, 65, 0.05);
+    @apply rounded-[24px];
+  }
+
+  .plain-card {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(124, 134, 145, 0.12);
+    box-shadow: 0 8px 18px rgba(43, 53, 65, 0.04);
+    @apply rounded-[20px];
+  }
+
   .page-title {
     @apply text-3xl font-semibold tracking-tight sm:text-4xl;
     color: var(--text-main);

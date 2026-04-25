@@ -97,7 +97,7 @@ const ManageRates = () => {
   return (
     <div className="app-shell" dir="rtl">
       <div className="page-wrap max-w-5xl space-y-4">
-        <section className="glass-panel p-6 sm:p-8">
+        <section className="plain-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="chip mb-3">תמחור</div>
@@ -110,7 +110,7 @@ const ManageRates = () => {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="content-card p-6 h-fit">
+            <div className="plain-card p-6 h-fit">
               <div className="mb-4 flex items-center gap-3">
                 <span className="icon-badge"><FiPlus size={18} /></span>
                 <div>
@@ -148,7 +148,7 @@ const ManageRates = () => {
 
             <div className="grid gap-4 sm:grid-cols-2">
               {rates.map((rate) => (
-                <div key={rate.id} className="content-card p-5">
+                <div key={rate.id} className="plain-card p-5">
                   {editingId === rate.id ? (
                     <div className="space-y-3">
                       <div>

@@ -96,7 +96,7 @@ const ManageYouth = () => {
   return (
     <div className="app-shell" dir="rtl">
       <div className="page-wrap max-w-5xl space-y-4">
-        <section className="glass-panel p-6 sm:p-8">
+        <section className="plain-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="chip mb-3">ניהול נוער</div>
@@ -113,7 +113,7 @@ const ManageYouth = () => {
               const summary = summaryById.get(youthItem.id);
 
               return (
-                <div key={youthItem.id} className="content-card p-5">
+                <div key={youthItem.id} className="plain-card p-5">
                   {editingId === youthItem.id ? (
                     <div className="space-y-4">
                       <div>

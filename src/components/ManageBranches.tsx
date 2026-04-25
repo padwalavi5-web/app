@@ -95,7 +95,7 @@ const ManageBranches = () => {
   return (
     <div className="app-shell" dir="rtl">
       <div className="page-wrap max-w-5xl space-y-4">
-        <section className="glass-panel p-6 sm:p-8">
+        <section className="plain-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="chip mb-3">ענפים</div>
@@ -109,7 +109,7 @@ const ManageBranches = () => {
 
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-6">
-              <div className="content-card p-6">
+              <div className="plain-card p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="icon-badge"><FiPlus size={18} /></span>
                   <div>
@@ -143,7 +143,7 @@ const ManageBranches = () => {
                 </div>
               </div>
 
-              <div className="content-card p-6">
+              <div className="plain-card p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="icon-badge"><FiKey size={18} /></span>
                   <div>
@@ -176,7 +176,7 @@ const ManageBranches = () => {
                 </div>
               ) : (
                 branches.map((branch) => (
-                  <div key={branch.name} className="content-card p-5">
+                  <div key={branch.name} className="plain-card p-5">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <div className="chip mb-2">ענף פעיל</div>
