@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiClock, FiX } from 'react-icons/fi';
-import { getCurrentUser, getReports, updateReport } from '../data';
+import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
+import { getCurrentUser, getReports, logout, updateReport } from '../data';
 import type { CurrentUser, Report } from '../types';
 
 const ManagerApproval = () => {
@@ -9,6 +9,7 @@ const ManagerApproval = () => {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [rejectNote, setRejectNote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const navigate = useNavigate();
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const managerUser = currentUser?.role === 'manager' ? currentUser : null;
@@ -19,6 +20,7 @@ const ManagerApproval = () => {
     }
 
     setIsLoading(true);
+    setLoadError('');
     try {
       const allReports = await getReports();
       const pendingReports = allReports.filter(
@@ -28,6 +30,9 @@ const ManagerApproval = () => {
           report.branch === managerUser.branch,
       );
       setReports(pendingReports);
+    } catch (error) {
+      console.error(error);
+      setLoadError('טעינת הדיווחים נכשלה');
     } finally {
       setIsLoading(false);
     }
@@ -70,26 +75,48 @@ const ManagerApproval = () => {
     }
   };
 
-  if (!managerUser || isLoading) {
+  if (!managerUser) {
+    return null;
+  }
+
+  if (isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-6xl space-y-5">
+      <div className="page-wrap max-w-5xl space-y-4">
         <section className="glass-panel p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="chip mb-2">{managerUser.branch}</div>
               <h1 className="page-title">אישורים</h1>
             </div>
-            <div className="chip chip-warm">
-              <FiClock size={12} />
-              {reports.length}
+            <div className="toolbar">
+              <div className="chip chip-warm">{reports.length}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="btn-secondary"
+              >
+                <FiLogOut size={18} />
+              </button>
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
+          {loadError ? (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <span>{loadError}</span>
+              <button type="button" onClick={() => void loadReports()} className="btn-secondary px-3 py-2">
+                נסה שוב
+              </button>
+            </div>
+          ) : null}
+
+          <div className="grid gap-3 md:grid-cols-2">
             {reports.length === 0 ? (
               <div className="empty-state py-6">
                 <p className="page-subtitle">אין דיווחים</p>
@@ -102,10 +129,7 @@ const ManagerApproval = () => {
                       <div className="text-base font-semibold">{report.youthName}</div>
                       <div className="page-subtitle text-sm">{report.date} | {report.startTime}-{report.endTime}</div>
                     </div>
-                    <div className="chip chip-warm">
-                      <FiClock size={12} />
-                      {report.totalHours.toFixed(1)}
-                    </div>
+                    <div className="chip chip-warm">{report.totalHours.toFixed(1)}</div>
                   </div>
 
                   {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div>}

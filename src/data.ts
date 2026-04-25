@@ -22,6 +22,27 @@ import type {
   Youth,
 } from './types';
 
+const REQUEST_TIMEOUT_MS = 12000;
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Request timed out'));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 const normalizeBranch = (branchDoc: DocumentData | undefined, id?: string): Branch => ({
   name: String(branchDoc?.name ?? id ?? '').trim(),
   password: String(branchDoc?.password ?? '').trim(),
@@ -59,7 +80,7 @@ const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Repor
 });
 
 export const getBranches = async (): Promise<Branch[]> => {
-  const querySnapshot = await getDocs(collection(db, 'branches'));
+  const querySnapshot = await withTimeout(getDocs(collection(db, 'branches')));
   return querySnapshot.docs
     .map((branchDoc) => normalizeBranch(branchDoc.data(), branchDoc.id))
     .filter((branch) => branch.name);
@@ -98,12 +119,12 @@ export const updateGuidePassword = async (newPassword: string) => {
 };
 
 export const getGuidePassword = async (): Promise<string> => {
-  const guideDoc = await getDoc(doc(db, 'config', 'guideSettings'));
+  const guideDoc = await withTimeout(getDoc(doc(db, 'config', 'guideSettings')));
   return String(guideDoc.data()?.password ?? 'admin');
 };
 
 export const getYouth = async (): Promise<Youth[]> => {
-  const querySnapshot = await getDocs(collection(db, 'youth'));
+  const querySnapshot = await withTimeout(getDocs(collection(db, 'youth')));
   return querySnapshot.docs.map((youthDoc) => normalizeYouth(youthDoc.data(), youthDoc.id));
 };
 
@@ -160,7 +181,7 @@ export const finalizePaymentCycle = async (
 };
 
 export const getRates = async (): Promise<HourlyRate[]> => {
-  const querySnapshot = await getDocs(collection(db, 'rates'));
+  const querySnapshot = await withTimeout(getDocs(collection(db, 'rates')));
   return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() }) as HourlyRate);
 };
 
@@ -181,7 +202,7 @@ export const addReport = async (report: Omit<Report, 'id'>) => {
 };
 
 export const getReports = async (): Promise<Report[]> => {
-  const querySnapshot = await getDocs(collection(db, 'reports'));
+  const querySnapshot = await withTimeout(getDocs(collection(db, 'reports')));
   return querySnapshot.docs.map((reportDoc) => normalizeReport(reportDoc.data(), reportDoc.id));
 };
 

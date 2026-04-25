@@ -85,19 +85,22 @@ const ManageYouth = () => {
     }
   };
 
-  if (!guideUser || isLoading) {
+  if (!guideUser) {
+    return null;
+  }
+
+  if (isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-6xl space-y-6">
+      <div className="page-wrap max-w-5xl space-y-4">
         <section className="glass-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="chip mb-3">ניהול נוער</div>
-              <h1 className="page-title mb-2">עריכת נוער ושעות ידניות</h1>
-              <p className="page-subtitle">אפשר לעדכן פרטים, לשנות מספר תקציב, וגם להוסיף תיקון ידני לכמות השעות של כל ילד.</p>
+              <h1 className="page-title mb-0">נוער</h1>
             </div>
             <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
               <FiArrowRight size={18} />

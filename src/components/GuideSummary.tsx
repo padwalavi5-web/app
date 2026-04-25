@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiDownload, FiLayers, FiLogOut, FiRefreshCw, FiTrendingUp, FiUsers } from 'react-icons/fi';
+import { FiLogOut, FiRefreshCw, FiTrendingUp, FiUsers } from 'react-icons/fi';
 import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
@@ -134,15 +134,19 @@ const GuideSummary = () => {
     }
   };
 
-  if (!guideUser || isLoading) {
+  if (!guideUser) {
+    return null;
+  }
+
+  if (isLoading) {
     return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap space-y-5">
+      <div className="page-wrap max-w-5xl space-y-4">
         <section className="glass-panel p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="chip mb-2">מדריך</div>
               <h1 className="page-title">סיכום</h1>
@@ -157,9 +161,16 @@ const GuideSummary = () => {
             </button>
           </div>
 
-          {loadError ? <div className="chip chip-danger mb-4">{loadError}</div> : null}
+          {loadError ? (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <span>{loadError}</span>
+              <button type="button" onClick={() => void fetchData()} className="btn-secondary px-3 py-2">
+                נסה שוב
+              </button>
+            </div>
+          ) : null}
 
-          <div className="metric-grid">
+          <div className="metric-grid compact-grid">
             <div className="stat-card compact-card">
               <div className="flex items-center justify-between"><span className="page-subtitle">נערים</span><span className="icon-badge"><FiUsers size={18} /></span></div>
               <div className="stat-value">{summaryRows.length}</div>
@@ -169,7 +180,7 @@ const GuideSummary = () => {
               <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
             </div>
             <div className="stat-card compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">סכום</span><span className="icon-badge"><FiLayers size={18} /></span></div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">סכום</span><span className="icon-badge">₪</span></div>
               <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
             </div>
             <div className="stat-card compact-card">
@@ -185,7 +196,6 @@ const GuideSummary = () => {
             <button type="button" onClick={() => navigate('/guide/branches')} className="btn-secondary">ענפים</button>
             <button type="button" onClick={() => navigate('/guide/rates')} className="btn-secondary">תעריפים</button>
             <button type="button" onClick={handleExportAndReset} className="btn-primary" disabled={isExporting}>
-              <FiDownload size={18} />
               {isExporting ? 'מייצא...' : 'ייצוא + איפוס'}
             </button>
           </div>

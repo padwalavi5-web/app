@@ -2,21 +2,21 @@
 
 :root {
   color-scheme: light;
-  --page-bg: #f2f6f7;
-  --page-bg-2: #e7eef1;
-  --panel: rgba(255, 255, 255, 0.76);
-  --panel-strong: rgba(255, 255, 255, 0.9);
-  --stroke: rgba(124, 148, 161, 0.18);
-  --stroke-strong: rgba(65, 92, 111, 0.16);
-  --text-main: #112433;
-  --text-soft: #5d7282;
-  --brand: #176b63;
-  --brand-2: #315fce;
-  --brand-3: #d8a24c;
+  --page-bg: #f5f1ea;
+  --page-bg-2: #ece9e1;
+  --panel: rgba(255, 255, 255, 0.84);
+  --panel-strong: rgba(255, 255, 255, 0.94);
+  --stroke: rgba(124, 134, 145, 0.16);
+  --stroke-strong: rgba(77, 94, 108, 0.14);
+  --text-main: #20303b;
+  --text-soft: #677784;
+  --brand: #3f7a66;
+  --brand-2: #7f8fb8;
+  --brand-3: #c59c6c;
   --danger: #dc2626;
   --success: #15803d;
-  --shadow-lg: 0 22px 56px rgba(15, 35, 52, 0.1);
-  --shadow-md: 0 14px 36px rgba(15, 35, 52, 0.08);
+  --shadow-lg: 0 18px 42px rgba(43, 53, 65, 0.08);
+  --shadow-md: 0 10px 24px rgba(43, 53, 65, 0.06);
 }
 
 * {
@@ -26,10 +26,10 @@
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at 8% 10%, rgba(49, 95, 206, 0.08), transparent 24%),
-    radial-gradient(circle at 90% 12%, rgba(23, 107, 99, 0.1), transparent 22%),
-    radial-gradient(circle at 50% 100%, rgba(216, 162, 76, 0.05), transparent 28%),
-    linear-gradient(180deg, #f8fbfc 0%, var(--page-bg) 46%, var(--page-bg-2) 100%);
+    radial-gradient(circle at 8% 10%, rgba(127, 143, 184, 0.1), transparent 26%),
+    radial-gradient(circle at 92% 14%, rgba(63, 122, 102, 0.11), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(197, 156, 108, 0.09), transparent 30%),
+    linear-gradient(180deg, #faf8f4 0%, var(--page-bg) 48%, var(--page-bg-2) 100%);
   background-attachment: fixed;
 }
 
@@ -56,7 +56,7 @@ body::before {
   right: 8%;
   width: 240px;
   height: 240px;
-  background: rgba(29, 78, 216, 0.1);
+  background: rgba(127, 143, 184, 0.12);
 }
 
 body::after {
@@ -64,7 +64,7 @@ body::after {
   bottom: 10%;
   width: 280px;
   height: 280px;
-  background: rgba(15, 118, 110, 0.11);
+  background: rgba(63, 122, 102, 0.1);
 }
 
 #root {
@@ -83,34 +83,38 @@ textarea {
     @apply min-h-screen px-4 py-5 sm:px-6 sm:py-8;
   }
 
+  .login-shell {
+    @apply flex items-center justify-center;
+  }
+
   .page-wrap {
     @apply mx-auto w-full max-w-7xl;
   }
 
 .glass-panel {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.74));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(251, 249, 245, 0.82));
     border: 1px solid var(--stroke);
     box-shadow: var(--shadow-lg);
     -webkit-backdrop-filter: blur(22px);
     backdrop-filter: blur(22px);
-    @apply relative overflow-hidden rounded-[28px];
+    @apply relative overflow-hidden rounded-[26px];
   }
 
   .glass-panel::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.38), transparent 38%, rgba(29, 78, 216, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 42%, rgba(127, 143, 184, 0.06) 100%);
     pointer-events: none;
   }
 
 .content-card {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 252, 253, 0.88));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 246, 242, 0.88));
     border: 1px solid var(--stroke-strong);
     box-shadow: var(--shadow-md);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
-    @apply rounded-[24px];
+    @apply rounded-[22px];
   }
 
   .page-title {
@@ -119,7 +123,7 @@ textarea {
   }
 
   .page-subtitle {
-    @apply text-sm leading-7 sm:text-base;
+    @apply text-sm leading-6 sm:text-base;
     color: var(--text-soft);
   }
 
@@ -135,14 +139,14 @@ textarea {
   .field-input {
     @apply w-full rounded-2xl border px-4 py-3 outline-none transition duration-200;
     border-color: rgba(130, 151, 164, 0.28);
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.94);
     color: var(--text-main);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
   .field-input:focus {
-    border-color: rgba(29, 78, 216, 0.4);
-    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
+    border-color: rgba(127, 143, 184, 0.38);
+    box-shadow: 0 0 0 4px rgba(127, 143, 184, 0.12);
   }
 
   .btn-primary,
@@ -155,12 +159,12 @@ textarea {
   .btn-primary {
     color: white;
     background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
-    box-shadow: 0 18px 34px rgba(16, 91, 116, 0.24);
+    box-shadow: 0 12px 24px rgba(63, 122, 102, 0.18);
   }
 
   .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 18px 30px rgba(16, 91, 116, 0.22);
+    box-shadow: 0 14px 28px rgba(63, 122, 102, 0.2);
   }
 
   .btn-secondary {
@@ -207,12 +211,12 @@ textarea {
   }
 
   .stat-card {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 252, 253, 0.82));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 246, 242, 0.84));
     border: 1px solid var(--stroke-strong);
     box-shadow: var(--shadow-md);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
-    @apply rounded-[24px] p-4;
+    @apply rounded-[22px] p-4;
   }
 
   .compact-card .stat-value {
@@ -225,9 +229,9 @@ textarea {
 
   .icon-badge {
     @apply inline-flex h-10 w-10 items-center justify-center rounded-2xl;
-    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(29, 78, 216, 0.1));
-    color: var(--brand-2);
-    border: 1px solid rgba(29, 78, 216, 0.1);
+    background: linear-gradient(135deg, rgba(63, 122, 102, 0.12), rgba(127, 143, 184, 0.12));
+    color: var(--brand);
+    border: 1px solid rgba(127, 143, 184, 0.12);
   }
 
   .toolbar {
@@ -240,6 +244,10 @@ textarea {
 
   .metric-grid {
     @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .compact-grid {
+    @apply xl:grid-cols-4;
   }
 
   .empty-state {
@@ -264,7 +272,7 @@ textarea {
   }
 
   .table-shell {
-    @apply overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/80 shadow-[0_22px_50px_rgba(15,35,52,0.08)];
+    @apply overflow-hidden rounded-[24px] border border-slate-200/70 bg-white/80 shadow-[0_14px_28px_rgba(43,53,65,0.07)];
   }
 
   .table-shell table {

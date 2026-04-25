@@ -84,19 +84,22 @@ const ManageBranches = () => {
     alert('סיסמת המדריך עודכנה.');
   };
 
-  if (!guideUser || isLoading) {
+  if (!guideUser) {
+    return null;
+  }
+
+  if (isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-6xl space-y-6">
+      <div className="page-wrap max-w-5xl space-y-4">
         <section className="glass-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="chip mb-3">ניהול ענפים והרשאות</div>
-              <h1 className="page-title mb-2">ניהול ענפים וסיסמת מדריך</h1>
-              <p className="page-subtitle">כאן אפשר לפתוח ענפים חדשים, לעדכן סיסמאות ענף, וגם לשנות את סיסמת המדריך.</p>
+              <div className="chip mb-3">ענפים</div>
+              <h1 className="page-title mb-0">ניהול ענפים</h1>
             </div>
             <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
               <FiArrowRight size={18} />
@@ -111,7 +114,6 @@ const ManageBranches = () => {
                   <span className="icon-badge"><FiPlus size={18} /></span>
                   <div>
                     <h2 className="section-title">הוספת ענף חדש</h2>
-                    <p className="page-subtitle">יצירת כניסה חדשה למנהל ענף.</p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -146,7 +148,6 @@ const ManageBranches = () => {
                   <span className="icon-badge"><FiKey size={18} /></span>
                   <div>
                     <h2 className="section-title">סיסמת מדריך</h2>
-                    <p className="page-subtitle">עדכון סיסמת המדריך הראשית של המערכת.</p>
                   </div>
                 </div>
                 <div className="space-y-4">

@@ -86,19 +86,22 @@ const ManageRates = () => {
     }
   };
 
-  if (!guideUser || isLoading) {
+  if (!guideUser) {
+    return null;
+  }
+
+  if (isLoading) {
     return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
   }
 
   return (
     <div className="app-shell" dir="rtl">
-      <div className="page-wrap max-w-5xl space-y-6">
+      <div className="page-wrap max-w-5xl space-y-4">
         <section className="glass-panel p-6 sm:p-8">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="chip mb-3">תמחור</div>
-              <h1 className="page-title mb-2">ניהול תעריפי שכר</h1>
-              <p className="page-subtitle">טבלת תעריפים נקייה ומסודרת לפי גיל, לעריכה מהירה מתוך אותו מסך.</p>
+              <h1 className="page-title mb-0">תעריפים</h1>
             </div>
             <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
               <FiArrowRight size={18} />
@@ -112,7 +115,6 @@ const ManageRates = () => {
                 <span className="icon-badge"><FiPlus size={18} /></span>
                 <div>
                   <h2 className="section-title">הוספת תעריף</h2>
-                  <p className="page-subtitle">תעריף חדש לפי גיל.</p>
                 </div>
               </div>
 

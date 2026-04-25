@@ -1,14 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBriefcase, FiLock, FiShield, FiUser } from 'react-icons/fi';
-import AppMark from './AppMark';
 import { addYouth, getBranches, getGuidePassword, getManagers, getYouth, setCurrentUser } from '../data';
 import type { Branch, Role, Youth } from '../types';
 
-const roleLabels: Record<Role, { title: string; description: string; icon: typeof FiUser }> = {
-  youth: { title: 'נוער', description: 'כניסה לדיווח שעות ומעקב אישי', icon: FiUser },
-  manager: { title: 'מנהל ענף', description: 'אישור דיווחים של הענף', icon: FiBriefcase },
-  guide: { title: 'מדריך', description: 'ניהול מלא של המערכת והנתונים', icon: FiShield },
+const roleLabels: Record<Role, string> = {
+  youth: 'נוער',
+  manager: 'מנהל ענף',
+  guide: 'מדריך',
 };
 
 const Login = () => {
@@ -21,137 +19,208 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    getBranches().then(setBranches).catch(console.error);
+    getBranches()
+      .then(setBranches)
+      .catch((error) => {
+        console.error(error);
+        setLoadError('טעינת הענפים נכשלה. אפשר לנסות שוב.');
+      });
   }, []);
 
   const handleLogin = async () => {
     setIsSubmitting(true);
+
     try {
       if (role === 'youth') {
         const youth = await getYouth();
         const existingUser = youth.find(
-          (item: Youth) => item.name.trim() === name.trim() && item.personalBudgetNumber.trim() === budgetNumber.trim()
+          (item: Youth) => item.name.trim() === name.trim() && item.personalBudgetNumber.trim() === budgetNumber.trim(),
         );
 
         if (youthMode === 'login') {
-          if (!existingUser) return alert('לא נמצאה הרשמה.');
+          if (!existingUser) {
+            alert('לא נמצאה הרשמה.');
+            return;
+          }
+
           setCurrentUser({ ...existingUser, role: 'youth' });
           navigate('/youth');
-        } else {
-          if (existingUser) return alert('משתמש זה כבר קיים במערכת.');
-          const id = await addYouth({
-            name, birthDate, personalBudgetNumber: budgetNumber,
-            totalHours: 0, lastResetHours: 0, manualHoursAdjustment: 0,
-          });
-          setCurrentUser({
-            id, name, birthDate, personalBudgetNumber: budgetNumber,
-            totalHours: 0, lastResetHours: 0, manualHoursAdjustment: 0, role: 'youth',
-          });
-          navigate('/youth');
+          return;
         }
-      } else if (role === 'manager') {
+
+        if (existingUser) {
+          alert('משתמש זה כבר קיים במערכת.');
+          return;
+        }
+
+        const id = await addYouth({
+          name,
+          birthDate,
+          personalBudgetNumber: budgetNumber,
+          totalHours: 0,
+          lastResetHours: 0,
+          manualHoursAdjustment: 0,
+        });
+
+        setCurrentUser({
+          id,
+          name,
+          birthDate,
+          personalBudgetNumber: budgetNumber,
+          totalHours: 0,
+          lastResetHours: 0,
+          manualHoursAdjustment: 0,
+          role: 'youth',
+        });
+        navigate('/youth');
+        return;
+      }
+
+      if (role === 'manager') {
         const managers = await getManagers();
-        const manager = managers.find((item: any) => item.branch === branch && item.password === password);
-        if (!manager) return alert('פרטים שגויים.');
+        const manager = managers.find((item) => item.branch === branch && item.password === password);
+        if (!manager) {
+          alert('פרטים שגויים.');
+          return;
+        }
+
         setCurrentUser({ branch: manager.branch, role: 'manager' });
         navigate('/manager');
-      } else {
-        const savedPassword = await getGuidePassword();
-        if (password !== savedPassword) return alert('סיסמה שגויה.');
-        setCurrentUser({ role: 'guide' });
-        navigate('/guide');
+        return;
       }
+
+      const savedPassword = await getGuidePassword();
+      if (password !== savedPassword) {
+        alert('סיסמה שגויה.');
+        return;
+      }
+
+      setCurrentUser({ role: 'guide' });
+      navigate('/guide');
+    } catch (error) {
+      console.error(error);
+      alert('הפעולה נכשלה. נסה שוב.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const CurrentIcon = roleLabels[role].icon;
-
   return (
-    <div className="min-h-screen bg-slate-50" dir="rtl">
-      <div className="max-w-md mx-auto pt-12 px-4 pb-20">
-        <div className="flex flex-col items-center mb-8">
-          <AppMark />
-          <h1 className="text-2xl font-bold mt-4 text-slate-900">ברוכים הבאים</h1>
-        </div>
+    <div className="app-shell login-shell" dir="rtl">
+      <div className="page-wrap max-w-md">
+        <section className="glass-panel p-4 sm:p-5">
+          <div className="segmented mb-4 grid-cols-3">
+            {(Object.keys(roleLabels) as Role[]).map((currentRole) => (
+              <button
+                key={currentRole}
+                type="button"
+                onClick={() => setRole(currentRole)}
+                className={role === currentRole ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+              >
+                {roleLabels[currentRole]}
+              </button>
+            ))}
+          </div>
 
-        <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6">
-            <div className="flex justify-center gap-2 mb-8 bg-slate-100 p-1.5 rounded-2xl">
-              {(Object.keys(roleLabels) as Role[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    role === r ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  {roleLabels[r].title}
-                </button>
-              ))}
-            </div>
-
-            <div className="mb-6 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mb-3">
-                <CurrentIcon size={24} />
-              </div>
-              <h2 className="text-lg font-semibold">{roleLabels[role].title}</h2>
-            </div>
-
-            <div className="space-y-4">
-              {role === 'youth' && (
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-6">
-                  <button type="button" onClick={() => setYouthMode('login')} className={`flex-1 py-2 text-sm rounded-lg ${youthMode === 'login' ? 'bg-white shadow-sm font-bold' : ''}`}>כניסה</button>
-                  <button type="button" onClick={() => setYouthMode('register')} className={`flex-1 py-2 text-sm rounded-lg ${youthMode === 'register' ? 'bg-white shadow-sm font-bold' : ''}`}>הרשמה</button>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="name-input" className="field-label">שם מלא</label>
-                <input id="name-input" type="text" className="field-input" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-
-              {role === 'youth' && (
-                <>
-                  <div>
-                    <label htmlFor="budget-input" className="field-label">מספר תקציב</label>
-                    <input id="budget-input" type="text" className="field-input" value={budgetNumber} onChange={(e) => setBudgetNumber(e.target.value)} />
-                  </div>
-                  {youthMode === 'register' && (
-                    <div>
-                      <label htmlFor="birth-input" className="field-label">תאריך לידה</label>
-                      <input id="birth-input" type="date" className="field-input" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                    </div>
-                  )}
-                </>
-              )}
-
-              {role === 'manager' && (
-                <div>
-                  <label htmlFor="branch-select" className="field-label">ענף</label>
-                  <select id="branch-select" className="field-input" value={branch} onChange={(e) => setBranch(e.target.value)}>
-                    <option value="">בחר ענף</option>
-                    {branches.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {(role === 'manager' || role === 'guide') && (
-                <div>
-                  <label htmlFor="pass-input" className="field-label flex items-center gap-1"><FiLock size={14} /> סיסמה</label>
-                  <input id="pass-input" type="password" className="field-input" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-              )}
-
-              <button type="button" onClick={handleLogin} className="btn-primary w-full mt-6" disabled={isSubmitting}>
-                {isSubmitting ? 'טוען...' : (youthMode === 'register' && role === 'youth' ? 'הרשמה למערכת' : 'כניסה')}
+          {role === 'youth' && (
+            <div className="segmented mb-4 grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setYouthMode('login')}
+                className={youthMode === 'login' ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+              >
+                כניסה
+              </button>
+              <button
+                type="button"
+                onClick={() => setYouthMode('register')}
+                className={youthMode === 'register' ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+              >
+                הרשמה
               </button>
             </div>
+          )}
+
+          {loadError ? <div className="chip chip-danger mb-4">{loadError}</div> : null}
+
+          <div className="space-y-3">
+            {role === 'youth' && (
+              <>
+                <div>
+                  <label htmlFor="name-input" className="field-label">שם מלא</label>
+                  <input id="name-input" type="text" className="field-input" value={name} onChange={(event) => setName(event.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="budget-input" className="field-label">מספר תקציב</label>
+                  <input
+                    id="budget-input"
+                    type="text"
+                    className="field-input"
+                    value={budgetNumber}
+                    onChange={(event) => setBudgetNumber(event.target.value)}
+                  />
+                </div>
+                {youthMode === 'register' && (
+                  <div>
+                    <label htmlFor="birth-input" className="field-label">תאריך לידה</label>
+                    <input
+                      id="birth-input"
+                      type="date"
+                      className="field-input"
+                      value={birthDate}
+                      onChange={(event) => setBirthDate(event.target.value)}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {role === 'manager' && (
+              <>
+                <div>
+                  <label htmlFor="branch-select" className="field-label">ענף</label>
+                  <select id="branch-select" className="field-input" value={branch} onChange={(event) => setBranch(event.target.value)}>
+                    <option value="">בחר ענף</option>
+                    {branches.map((item) => (
+                      <option key={item.name} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="pass-input" className="field-label">סיסמה</label>
+                  <input
+                    id="pass-input"
+                    type="password"
+                    className="field-input"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            {role === 'guide' && (
+              <div>
+                <label htmlFor="pass-input" className="field-label">סיסמה</label>
+                <input
+                  id="pass-input"
+                  type="password"
+                  className="field-input"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+            )}
+
+            <button type="button" onClick={handleLogin} className="btn-primary w-full mt-2" disabled={isSubmitting}>
+              {isSubmitting ? 'טוען...' : role === 'youth' && youthMode === 'register' ? 'הרשמה' : 'כניסה'}
+            </button>
           </div>
         </section>
       </div>
