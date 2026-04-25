@@ -182,7 +182,11 @@ textarea {
   .btn-primary,
   .btn-secondary,
   .btn-danger,
-  .btn-soft {
+  .btn-soft,
+  .btn-olive,
+  .btn-sky,
+  .btn-sand,
+  .btn-rose {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold transition duration-200;
   }
 
@@ -213,6 +217,30 @@ textarea {
     color: white;
     background: linear-gradient(135deg, #ef4444 0%, var(--danger) 100%);
     box-shadow: 0 16px 32px rgba(220, 38, 38, 0.18);
+  }
+
+  .btn-olive {
+    color: white;
+    background: linear-gradient(135deg, #4c8a6f 0%, #6e9e86 100%);
+    box-shadow: 0 12px 24px rgba(76, 138, 111, 0.18);
+  }
+
+  .btn-sky {
+    color: white;
+    background: linear-gradient(135deg, #6a86c4 0%, #90a4d7 100%);
+    box-shadow: 0 12px 24px rgba(106, 134, 196, 0.18);
+  }
+
+  .btn-sand {
+    color: #6e5030;
+    background: linear-gradient(135deg, #ead3b1 0%, #f1dfc4 100%);
+    box-shadow: 0 10px 20px rgba(197, 156, 108, 0.18);
+  }
+
+  .btn-rose {
+    color: #7c4b57;
+    background: linear-gradient(135deg, #ebc6cf 0%, #f4d9de 100%);
+    box-shadow: 0 10px 20px rgba(193, 120, 137, 0.16);
   }
 
   .btn-soft {
@@ -336,6 +364,24 @@ textarea {
 
   .segmented button {
     @apply rounded-2xl px-4 py-3 text-sm font-semibold transition;
+  }
+
+  .segmented-olive button[data-active='true'] {
+    background: linear-gradient(135deg, rgba(76, 138, 111, 0.16), rgba(110, 158, 134, 0.22));
+    color: #355b4a;
+    box-shadow: 0 6px 14px rgba(76, 138, 111, 0.12);
+  }
+
+  .segmented-sky button[data-active='true'] {
+    background: linear-gradient(135deg, rgba(106, 134, 196, 0.16), rgba(144, 164, 215, 0.24));
+    color: #465f96;
+    box-shadow: 0 6px 14px rgba(106, 134, 196, 0.12);
+  }
+
+  .segmented-sand button[data-active='true'] {
+    background: linear-gradient(135deg, rgba(234, 211, 177, 0.48), rgba(241, 223, 196, 0.66));
+    color: #7a5a33;
+    box-shadow: 0 6px 14px rgba(197, 156, 108, 0.1);
   }
 
   .table-shell {

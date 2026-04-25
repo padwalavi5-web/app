@@ -9,6 +9,12 @@ const roleLabels: Record<Role, string> = {
   guide: 'מדריך',
 };
 
+const roleButtonClass: Record<Role, string> = {
+  youth: 'segmented-olive',
+  manager: 'segmented-sky',
+  guide: 'segmented-sand',
+};
+
 const Login = () => {
   const [role, setRole] = useState<Role>('youth');
   const [youthMode, setYouthMode] = useState<'login' | 'register'>('login');
@@ -113,13 +119,14 @@ const Login = () => {
     <div className="app-shell login-shell" dir="rtl">
       <div className="page-wrap max-w-md">
         <section className="glass-panel p-4 sm:p-5">
-          <div className="segmented mb-4 grid-cols-3">
+          <div className={`segmented mb-4 grid-cols-3 ${roleButtonClass[role]}`}>
             {(Object.keys(roleLabels) as Role[]).map((currentRole) => (
               <button
                 key={currentRole}
                 type="button"
                 onClick={() => setRole(currentRole)}
-                className={role === currentRole ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+                data-active={role === currentRole}
+                className={role === currentRole ? '' : 'text-[var(--text-soft)]'}
               >
                 {roleLabels[currentRole]}
               </button>
@@ -127,18 +134,20 @@ const Login = () => {
           </div>
 
           {role === 'youth' && (
-            <div className="segmented mb-4 grid-cols-2">
+            <div className="segmented segmented-sky mb-4 grid-cols-2">
               <button
                 type="button"
                 onClick={() => setYouthMode('login')}
-                className={youthMode === 'login' ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+                data-active={youthMode === 'login'}
+                className={youthMode === 'login' ? '' : 'text-[var(--text-soft)]'}
               >
                 כניסה
               </button>
               <button
                 type="button"
                 onClick={() => setYouthMode('register')}
-                className={youthMode === 'register' ? 'bg-white text-[var(--text-main)] shadow-sm' : 'text-[var(--text-soft)]'}
+                data-active={youthMode === 'register'}
+                className={youthMode === 'register' ? '' : 'text-[var(--text-soft)]'}
               >
                 הרשמה
               </button>
@@ -218,7 +227,20 @@ const Login = () => {
               </div>
             )}
 
-            <button type="button" onClick={handleLogin} className="btn-primary w-full mt-2" disabled={isSubmitting}>
+            <button
+              type="button"
+              onClick={handleLogin}
+              className={`w-full mt-2 ${
+                role === 'youth'
+                  ? youthMode === 'register'
+                    ? 'btn-sand'
+                    : 'btn-olive'
+                  : role === 'manager'
+                    ? 'btn-sky'
+                    : 'btn-rose'
+              }`}
+              disabled={isSubmitting}
+            >
               {isSubmitting ? 'טוען...' : role === 'youth' && youthMode === 'register' ? 'הרשמה' : 'כניסה'}
             </button>
           </div>

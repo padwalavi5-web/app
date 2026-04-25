@@ -12,7 +12,7 @@ const ManageRates = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-  const currentUser = getCurrentUser() as CurrentUser | null;
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const loadRates = useCallback(async (showLoader = false) => {
@@ -111,7 +111,7 @@ const ManageRates = () => {
             </div>
             <div className="toolbar">
               {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
-              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+              <button type="button" onClick={() => navigate('/guide')} className="btn-sky">
                 <FiArrowRight size={18} />
                 חזור לסיכום
               </button>
@@ -148,7 +148,7 @@ const ManageRates = () => {
                     onChange={(event) => setNewRate({ ...newRate, rate: event.target.value })}
                   />
                 </div>
-                <button type="button" onClick={handleAdd} className="btn-primary w-full">
+                <button type="button" onClick={handleAdd} className="btn-olive w-full">
                   <FiSave size={18} />
                   הוסף תעריף
                 </button>
@@ -181,10 +181,10 @@ const ManageRates = () => {
                         />
                       </div>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => void saveEdit(rate.id)} className="btn-primary flex-1">
+                        <button type="button" onClick={() => void saveEdit(rate.id)} className="btn-olive flex-1">
                           שמור
                         </button>
-                        <button type="button" onClick={() => setEditingId(null)} className="btn-secondary flex-1">
+                        <button type="button" onClick={() => setEditingId(null)} className="btn-sand flex-1">
                           ביטול
                         </button>
                       </div>
@@ -196,7 +196,7 @@ const ManageRates = () => {
                         <span className="chip">גיל {rate.age}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => startEdit(rate)} className="btn-secondary flex-1">
+                        <button type="button" onClick={() => startEdit(rate)} className="btn-sky flex-1">
                           <FiEdit3 size={16} />
                           ערוך
                         </button>

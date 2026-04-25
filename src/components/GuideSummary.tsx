@@ -151,10 +151,10 @@ const GuideSummary = () => {
               <div className="chip mb-2">מדריך</div>
               <h1 className="page-title">סיכום</h1>
             </div>
-            <button 
-              type="button" 
-              onClick={() => { logout(); navigate('/'); }} 
-              className="btn-secondary"
+            <button
+              type="button"
+              onClick={() => { logout(); navigate('/'); }}
+              className="btn-rose"
               aria-label="התנתקות"
             >
               <FiLogOut size={18} />
@@ -164,7 +164,7 @@ const GuideSummary = () => {
           {loadError ? (
             <div className="mb-4 flex items-center justify-between gap-3 rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               <span>{loadError}</span>
-              <button type="button" onClick={() => void fetchData()} className="btn-secondary px-3 py-2">
+              <button type="button" onClick={() => void fetchData()} className="btn-sky px-3 py-2">
                 נסה שוב
               </button>
             </div>
@@ -192,10 +192,10 @@ const GuideSummary = () => {
 
         <section className="glass-panel p-5 sm:p-6">
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <button type="button" onClick={() => navigate('/guide/youth')} className="btn-secondary">נוער</button>
-            <button type="button" onClick={() => navigate('/guide/branches')} className="btn-secondary">ענפים</button>
-            <button type="button" onClick={() => navigate('/guide/rates')} className="btn-secondary">תעריפים</button>
-            <button type="button" onClick={handleExportAndReset} className="btn-primary" disabled={isExporting}>
+            <button type="button" onClick={() => navigate('/guide/youth')} className="btn-olive">נוער</button>
+            <button type="button" onClick={() => navigate('/guide/branches')} className="btn-sky">ענפים</button>
+            <button type="button" onClick={() => navigate('/guide/rates')} className="btn-sand">תעריפים</button>
+            <button type="button" onClick={handleExportAndReset} className="btn-rose" disabled={isExporting}>
               {isExporting ? 'מייצא...' : 'ייצוא + איפוס'}
             </button>
           </div>

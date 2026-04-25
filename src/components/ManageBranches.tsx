@@ -22,7 +22,7 @@ const ManageBranches = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-  const currentUser = getCurrentUser() as CurrentUser | null;
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchBranches = useCallback(async (showLoader = false) => {
@@ -109,7 +109,7 @@ const ManageBranches = () => {
             </div>
             <div className="toolbar">
               {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
-              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+              <button type="button" onClick={() => navigate('/guide')} className="btn-sky">
                 <FiArrowRight size={18} />
                 חזור לסיכום
               </button>
@@ -145,7 +145,7 @@ const ManageBranches = () => {
                       onChange={(event) => setNewBranch({ ...newBranch, password: event.target.value })}
                     />
                   </div>
-                  <button type="button" onClick={handleAdd} className="btn-primary w-full">
+                  <button type="button" onClick={handleAdd} className="btn-olive w-full">
                     <FiSave size={18} />
                     שמור ענף
                   </button>
@@ -170,7 +170,7 @@ const ManageBranches = () => {
                       onChange={(event) => setGuidePassword(event.target.value)}
                     />
                   </div>
-                  <button type="button" onClick={handleSaveGuidePassword} className="btn-primary w-full">
+                  <button type="button" onClick={handleSaveGuidePassword} className="btn-sky w-full">
                     <FiLock size={18} />
                     עדכן סיסמת מדריך
                   </button>
@@ -207,7 +207,7 @@ const ManageBranches = () => {
                           />
                         </div>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => void handleSaveBranchPassword(branch.name)} className="btn-primary flex-1">
+                          <button type="button" onClick={() => void handleSaveBranchPassword(branch.name)} className="btn-olive flex-1">
                             שמור
                           </button>
                           <button
@@ -216,7 +216,7 @@ const ManageBranches = () => {
                               setEditingBranchName(null);
                               setEditingPassword('');
                             }}
-                            className="btn-secondary flex-1"
+                            className="btn-sand flex-1"
                           >
                             ביטול
                           </button>
@@ -230,7 +230,7 @@ const ManageBranches = () => {
                             setEditingBranchName(branch.name);
                             setEditingPassword(branch.password);
                           }}
-                          className="btn-secondary flex-1"
+                          className="btn-sky flex-1"
                         >
                           ערוך סיסמה
                         </button>

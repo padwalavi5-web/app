@@ -14,7 +14,7 @@ const ManageYouth = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-  const currentUser = getCurrentUser() as CurrentUser | null;
+  const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
   const fetchYouthData = useCallback(async (showLoader = false) => {
@@ -110,7 +110,7 @@ const ManageYouth = () => {
             </div>
             <div className="toolbar">
               {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
-              <button type="button" onClick={() => navigate('/guide')} className="btn-secondary">
+              <button type="button" onClick={() => navigate('/guide')} className="btn-sky">
                 <FiArrowRight size={18} />
                 חזור לסיכום
               </button>
@@ -170,11 +170,11 @@ const ManageYouth = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        <button type="button" onClick={handleSaveEdit} className="btn-primary flex-1">
+                        <button type="button" onClick={handleSaveEdit} className="btn-olive flex-1">
                           <FiSave size={16} />
                           שמור
                         </button>
-                        <button type="button" onClick={() => setEditingId(null)} className="btn-secondary flex-1">
+                        <button type="button" onClick={() => setEditingId(null)} className="btn-sand flex-1">
                           ביטול
                         </button>
                       </div>
@@ -212,7 +212,7 @@ const ManageYouth = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => startEdit(youthItem)} className="btn-secondary flex-1">
+                        <button type="button" onClick={() => startEdit(youthItem)} className="btn-sky flex-1">
                           <FiEdit3 size={16} />
                           ערוך
                         </button>
