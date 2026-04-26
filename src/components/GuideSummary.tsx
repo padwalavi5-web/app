@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiLogOut, FiRefreshCw, FiTrendingUp, FiUsers } from 'react-icons/fi';
+import { FiCalendar, FiLogOut, FiTrendingUp, FiUsers } from 'react-icons/fi';
 import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
@@ -58,10 +58,10 @@ const GuideSummary = () => {
       (accumulator, row) => {
         accumulator.pendingHours += row.summary.payablePendingHours;
         accumulator.pendingAmount += row.summary.payablePendingAmount;
-        accumulator.approvedHours += row.summary.cycleApprovedHours;
+        accumulator.currentMonthHours += row.summary.currentMonthHours;
         return accumulator;
       },
-      { pendingHours: 0, pendingAmount: 0, approvedHours: 0 },
+      { pendingHours: 0, pendingAmount: 0, currentMonthHours: 0 },
     ),
     [summaryRows],
   );
@@ -185,8 +185,8 @@ const GuideSummary = () => {
               <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
             </div>
             <div className="stat-card stat-card-rose compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">מחזור</span><span className="icon-badge"><FiRefreshCw size={18} /></span></div>
-              <div className="stat-value">{totals.approvedHours.toFixed(1)}</div>
+              <div className="flex items-center justify-between"><span className="page-subtitle">החודש</span><span className="icon-badge"><FiCalendar size={18} /></span></div>
+              <div className="stat-value">{totals.currentMonthHours.toFixed(1)}</div>
             </div>
           </div>
         </section>

@@ -158,7 +158,7 @@ const ManageYouth = () => {
                       </div>
 
                       <div>
-                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">שעות ידניות במחזור</label>
+                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">שעות ידניות לשנת העבודה</label>
                         <input
                           id={`manual-hours-${youthItem.id}`}
                           className="field-input"
@@ -198,7 +198,7 @@ const ManageYouth = () => {
 
                       <div className="mb-4 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-3xl bg-[rgba(230,244,236,0.9)] p-4">
-                          <div className="text-xs text-slate-500">שעות במחזור</div>
+                          <div className="text-xs text-slate-500">שעות בשנת העבודה</div>
                           <div className="mt-2 text-xl font-semibold">{summary?.cycleApprovedHours.toFixed(1) ?? '0.0'}</div>
                         </div>
                         <div className="rounded-3xl bg-[rgba(236,241,251,0.9)] p-4">

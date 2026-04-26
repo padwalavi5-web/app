@@ -1,25 +1,17 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Kibbutz hours app icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Clock app icon">
   <defs>
-    <linearGradient id="bg" x1="16" x2="112" y1="12" y2="116" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0f766e"/>
-      <stop offset="0.58" stop-color="#1d4ed8"/>
-      <stop offset="1" stop-color="#f59e0b"/>
+    <linearGradient id="bg" x1="18" x2="110" y1="12" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4c8a6f"/>
+      <stop offset="1" stop-color="#6a86c4"/>
     </linearGradient>
-    <linearGradient id="glass" x1="32" x2="96" y1="30" y2="98" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0.06"/>
+    <linearGradient id="shine" x1="30" x2="96" y1="24" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.08"/>
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="34" fill="url(#bg)"/>
-  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.22"/>
-  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5">
-    <circle cx="40" cy="40" r="15"/>
-    <path d="M40 31v10l7 4"/>
-    <rect x="73" y="24" width="24" height="28" rx="6"/>
-    <path d="M79 19v9M91 19v9M73 34h24"/>
-    <path d="M28 88l17-17 11 11"/>
-    <path d="M51 67l10 10"/>
-    <path d="M83 76c5.6 0 10 3.7 10 8.2 0 9.1-20 9.1-20 18.2 0 4.5 4.4 8.2 10 8.2"/>
-    <path d="M83 69v46"/>
-  </g>
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#shine)" stroke="#ffffff" stroke-opacity="0.22"/>
+  <circle cx="64" cy="64" r="31" fill="none" stroke="#ffffff" stroke-width="8"/>
+  <circle cx="64" cy="64" r="3.5" fill="#ffffff"/>
+  <path d="M64 46v20l13 8" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
 </svg>
