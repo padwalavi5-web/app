@@ -1,9 +1,16 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCalendar, FiLogOut, FiTrendingUp, FiUsers } from 'react-icons/fi';
-import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
+import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
+import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout, updateReport } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary } from '../workSummary';
+
+const reportStatusLabel: Record<Report['status'], string> = {
+  pending: 'ממתין',
+  approved: 'אושר',
+  rejected: 'נדחה',
+  paid: 'שולם',
+};
 
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
@@ -12,8 +19,11 @@ const GuideSummary = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
   const navigate = useNavigate();
-  
+
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
@@ -22,9 +32,9 @@ const GuideSummary = () => {
     setLoadError('');
     try {
       const [youthResponse, reportsResponse, ratesResponse] = await Promise.all([
-        getYouth(), 
-        getReports(), 
-        getRates()
+        getYouth(),
+        getReports(),
+        getRates(),
       ]);
       setYouthList(youthResponse || []);
       setReports(reportsResponse || []);
@@ -46,24 +56,23 @@ const GuideSummary = () => {
   }, [fetchData, guideUser, navigate]);
 
   const summaryRows = useMemo(
-    () => youthList.map((youth) => ({ 
-      youth, 
-      summary: buildYouthWorkSummary(youth, reports, rates) 
-    })),
+    () =>
+      youthList.map((youth) => ({
+        youth,
+        summary: buildYouthWorkSummary(youth, reports, rates),
+      })),
     [youthList, reports, rates],
   );
 
-  const totals = useMemo(
-    () => summaryRows.reduce(
-      (accumulator, row) => {
-        accumulator.pendingHours += row.summary.payablePendingHours;
-        accumulator.pendingAmount += row.summary.payablePendingAmount;
-        accumulator.currentMonthHours += row.summary.currentMonthHours;
-        return accumulator;
-      },
-      { pendingHours: 0, pendingAmount: 0, currentMonthHours: 0 },
-    ),
-    [summaryRows],
+  const selectedYouthReports = useMemo(
+    () =>
+      selectedYouth
+        ? reports
+            .filter((report) => report.youthId === selectedYouth.id)
+            .slice()
+            .sort((left, right) => `${right.date}T${right.startTime}`.localeCompare(`${left.date}T${left.startTime}`))
+        : [],
+    [reports, selectedYouth],
   );
 
   const exportCsv = () => {
@@ -94,13 +103,11 @@ const GuideSummary = () => {
   };
 
   const handleExportAndReset = async () => {
-    // 1. בדיקה: האם יש נתונים
     if (!summaryRows.length) {
       alert('אין נתונים לייצוא.');
       return;
     }
 
-    // 2. סינון והכנת הנתונים (מניעת נתונים ריקים/לא תקינים)
     const youthUpdates = summaryRows
       .filter((row): row is (typeof summaryRows)[number] & { youth: Youth & { id: string } } => Boolean(row.youth.id))
       .map((row) => ({
@@ -128,10 +135,40 @@ const GuideSummary = () => {
       await fetchData();
       alert('הייצוא בוצע והנתונים אופסו בהצלחה.');
     } catch (error) {
-      console.error("Firebase Error:", error);
+      console.error('Firebase Error:', error);
       alert('הפעולה נכשלה. ייתכן שאין הרשאות או שהפרויקט לא מוגדר נכון.');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleApprove = async (reportId?: string) => {
+    if (!reportId) {
+      return;
+    }
+
+    try {
+      await updateReport(reportId, { status: 'approved', reviewNote: '' });
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('אישור הדיווח נכשל.');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedReport?.id || !rejectNote.trim()) {
+      return;
+    }
+
+    try {
+      await updateReport(selectedReport.id, { status: 'rejected', reviewNote: rejectNote.trim() });
+      setSelectedReport(null);
+      setRejectNote('');
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('דחיית הדיווח נכשלה.');
     }
   };
 
@@ -154,7 +191,10 @@ const GuideSummary = () => {
             </div>
             <button
               type="button"
-              onClick={() => { logout(); navigate('/'); }}
+              onClick={() => {
+                logout();
+                navigate('/');
+              }}
               className="btn-rose"
               aria-label="התנתקות"
             >
@@ -171,27 +211,6 @@ const GuideSummary = () => {
             </div>
           ) : null}
 
-          <div className="metric-grid compact-grid">
-            <div className="stat-card stat-card-olive compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">נערים</span><span className="icon-badge"><FiUsers size={18} /></span></div>
-              <div className="stat-value">{summaryRows.length}</div>
-            </div>
-            <div className="stat-card stat-card-sky compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">לתשלום</span><span className="icon-badge"><FiTrendingUp size={18} /></span></div>
-              <div className="stat-value">{totals.pendingHours.toFixed(1)}</div>
-            </div>
-            <div className="stat-card stat-card-sand compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">סכום</span><span className="icon-badge">₪</span></div>
-              <div className="stat-value">₪{totals.pendingAmount.toFixed(0)}</div>
-            </div>
-            <div className="stat-card stat-card-rose compact-card">
-              <div className="flex items-center justify-between"><span className="page-subtitle">החודש</span><span className="icon-badge"><FiCalendar size={18} /></span></div>
-              <div className="stat-value">{totals.currentMonthHours.toFixed(1)}</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="glass-panel p-5 sm:p-6">
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <button type="button" onClick={() => navigate('/guide/youth')} className="btn-olive">נוער</button>
             <button type="button" onClick={() => navigate('/guide/branches')} className="btn-sky">ענפים</button>
@@ -209,7 +228,7 @@ const GuideSummary = () => {
                 <thead><tr><th>שם</th><th>תקציב</th><th>החודש</th><th>מהחודש לתשלום</th><th>לתשלום</th><th>סכום</th></tr></thead>
                 <tbody>
                   {summaryRows.map((row) => (
-                    <tr key={row.youth.id}>
+                    <tr key={row.youth.id} className="cursor-pointer" onClick={() => setSelectedYouth(row.youth)}>
                       <td className="font-semibold">{row.youth.name}</td>
                       <td>{row.youth.personalBudgetNumber}</td>
                       <td>{row.summary.currentMonthHours.toFixed(1)}</td>
@@ -224,6 +243,91 @@ const GuideSummary = () => {
           )}
         </section>
       </div>
+
+      {selectedYouth && (
+        <div className="modal-backdrop" dir="rtl">
+          <div className="modal-panel max-w-3xl">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="section-title">{selectedYouth.name}</h2>
+                <div className="page-subtitle">היסטוריית עבודות</div>
+              </div>
+              <button type="button" onClick={() => setSelectedYouth(null)} className="btn-sand px-3 py-2">
+                סגור
+              </button>
+            </div>
+
+            {selectedYouthReports.length === 0 ? (
+              <div className="empty-state py-6">
+                <p className="page-subtitle">אין דיווחים</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedYouthReports.map((report) => (
+                  <div key={report.id} className="plain-card p-4">
+                    <div className="mb-3 flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-base font-semibold">{report.branch}</div>
+                        <div className="page-subtitle text-sm">{report.date} | {report.startTime}-{report.endTime}</div>
+                      </div>
+                      <div className="chip">{reportStatusLabel[report.status]}</div>
+                    </div>
+
+                    <div className="mb-3 text-sm text-slate-600">סה"כ {report.totalHours.toFixed(1)} שעות</div>
+                    {report.details ? <div className="mb-3 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div> : null}
+                    {report.reviewNote ? <div className="mb-3 rounded-3xl bg-rose-50/90 p-3 text-sm text-rose-700">{report.reviewNote}</div> : null}
+
+                    {report.status === 'pending' && report.approvalTarget === 'guide' ? (
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => void handleApprove(report.id)} className="btn-olive flex-1">
+                          <FiCheck size={16} />
+                          אשר
+                        </button>
+                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger flex-1">
+                          <FiX size={16} />
+                          דחה
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedReport && (
+        <div className="modal-backdrop" dir="rtl">
+          <div className="modal-panel max-w-md">
+            <div className="mb-4">
+              <div className="chip chip-danger mb-3">דחייה</div>
+              <h2 className="section-title">סיבה</h2>
+            </div>
+            <textarea
+              value={rejectNote}
+              onChange={(event) => setRejectNote(event.target.value)}
+              className="field-input mb-4 min-h-28"
+              placeholder="סיבת הדחייה..."
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={handleReject} className="btn-danger flex-1">
+                שלח
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedReport(null);
+                  setRejectNote('');
+                }}
+                className="btn-sand flex-1"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
