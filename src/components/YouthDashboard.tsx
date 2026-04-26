@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiLogOut, FiSend, FiTrendingUp } from 'react-icons/fi';
 import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
+import CircularProgress from './CircularProgress';
 import type { Branch, CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary, MANDATORY_HOURS_LIMIT } from '../workSummary';
 
@@ -173,14 +174,14 @@ const YouthDashboard = () => {
   return (
     <div className="app-shell" dir="rtl">
       <div className="page-wrap max-w-5xl space-y-4">
-        <section className="glass-panel p-5 sm:p-6">
+        <section className="glass-panel youth-hero p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="chip mb-2">{youthUser.name}</div>
               <h1 className="page-title mb-0">דיווחים</h1>
             </div>
             <div className="toolbar">
-              <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-primary">
+              <button type="button" onClick={() => setIsReportFormOpen(true)} className="btn-olive">
                 דיווח
               </button>
               <button
@@ -189,7 +190,7 @@ const YouthDashboard = () => {
                   logout();
                   navigate('/');
                 }}
-                className="btn-secondary"
+                className="btn-sky"
               >
                 <FiLogOut size={18} />
               </button>
@@ -206,35 +207,39 @@ const YouthDashboard = () => {
           ) : null}
 
           {summary && (
-            <div className="metric-grid compact-grid">
-              <div className="stat-card stat-card-olive compact-card">
-                <div className="flex items-center justify-between">
-                  <span className="page-subtitle">מחזור</span>
-                  <span className="icon-badge"><FiTrendingUp size={18} /></span>
-                </div>
-                <div className="stat-value">{summary.cycleApprovedHours.toFixed(1)}</div>
+            <div className="hero-grid items-stretch">
+              <div className="stat-card stat-card-olive youth-progress-card flex flex-col items-center justify-center p-5">
+                <CircularProgress
+                  value={summary.mandatoryCompletedHours}
+                  max={MANDATORY_HOURS_LIMIT}
+                  size={176}
+                  strokeWidth={12}
+                  color="#4c8a6f"
+                />
+                <div className="mt-4 text-sm text-[var(--text-soft)]">שעות חובה מתוך 90</div>
               </div>
-              <div className="stat-card stat-card-sky compact-card">
-                <div className="flex items-center justify-between">
-                  <span className="page-subtitle">לתשלום</span>
-                  <span className="icon-badge"><FiClock size={18} /></span>
+
+              <div className="metric-grid compact-grid">
+                <div className="stat-card stat-card-sky compact-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">החודש</span>
+                    <span className="icon-badge"><FiCalendar size={18} /></span>
+                  </div>
+                  <div className="stat-value">{summary.currentMonthHours.toFixed(1)}</div>
                 </div>
-                <div className="stat-value">{summary.payablePendingHours.toFixed(1)}</div>
-              </div>
-              <div className="stat-card stat-card-sand compact-card">
-                <div className="flex items-center justify-between">
-                  <span className="page-subtitle">סכום</span>
-                  <span className="icon-badge">₪</span>
+                <div className="stat-card stat-card-sand compact-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">מהחודש לתשלום</span>
+                    <span className="icon-badge"><FiClock size={18} /></span>
+                  </div>
+                  <div className="stat-value">{summary.currentMonthPayableHours.toFixed(1)}</div>
                 </div>
-                <div className="stat-value">₪{summary.payablePendingAmount.toFixed(0)}</div>
-              </div>
-              <div className="stat-card stat-card-rose compact-card">
-                <div className="flex items-center justify-between">
-                  <span className="page-subtitle">חובה</span>
-                  <span className="icon-badge"><FiCalendar size={18} /></span>
-                </div>
-                <div className="stat-value">
-                  {Math.min(summary.mandatoryCompletedHours, MANDATORY_HOURS_LIMIT).toFixed(1)}
+                <div className="stat-card stat-card-rose compact-card">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">כסף נצבר</span>
+                    <span className="icon-badge"><FiTrendingUp size={18} /></span>
+                  </div>
+                  <div className="stat-value">₪{summary.payablePendingAmount.toFixed(0)}</div>
                 </div>
               </div>
             </div>
@@ -254,7 +259,7 @@ const YouthDashboard = () => {
               </div>
             ) : (
               userReports.map((item) => (
-                <div key={item.id} className="content-card p-4">
+                <div key={item.id} className="content-card youth-report-card p-4">
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div>
                       <div className="text-base font-semibold">{item.branch}</div>
@@ -277,7 +282,7 @@ const YouthDashboard = () => {
           <div className="modal-panel max-w-xl">
             <div className="mb-5 flex items-center justify-between gap-4">
               <h2 className="section-title">דיווח שעות</h2>
-              <button type="button" onClick={() => setIsReportFormOpen(false)} className="btn-secondary px-3 py-2">
+              <button type="button" onClick={() => setIsReportFormOpen(false)} className="btn-sand px-3 py-2">
                 סגור
               </button>
             </div>
@@ -356,7 +361,7 @@ const YouthDashboard = () => {
                 </div>
               )}
 
-              <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
+              <button type="submit" className="btn-olive w-full" disabled={isSubmitting}>
                 <FiSend size={18} />
                 {isSubmitting ? 'שולח...' : 'שלח'}
               </button>

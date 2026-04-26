@@ -338,6 +338,26 @@ textarea {
     @apply grid gap-5 lg:grid-cols-[1.25fr_0.95fr];
   }
 
+  .youth-hero {
+    background:
+      radial-gradient(circle at 18% 18%, rgba(127, 143, 184, 0.18), transparent 24%),
+      radial-gradient(circle at 84% 16%, rgba(76, 138, 111, 0.16), transparent 22%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 243, 237, 0.86));
+  }
+
+  .youth-progress-card {
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.56), transparent 38%),
+      linear-gradient(180deg, rgba(230, 244, 236, 0.98), rgba(247, 249, 244, 0.94));
+    box-shadow: 0 16px 34px rgba(76, 138, 111, 0.12);
+  }
+
+  .youth-report-card {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 247, 243, 0.92));
+    box-shadow: 0 12px 26px rgba(43, 53, 65, 0.06);
+  }
+
   .metric-grid {
     @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
   }

@@ -33,6 +33,7 @@ export interface YouthWorkSummary {
   payableCumulativeHours: number;
   payablePendingHours: number;
   currentMonthHours: number;
+  currentMonthPayableHours: number;
   payablePendingAmount: number;
   totalEarnedAmount: number;
   manualAdjustmentHours: number;
@@ -56,40 +57,40 @@ export const buildYouthWorkSummary = (
     });
 
   let cycleApprovedHours = 0;
-  let mandatoryCompletedHours = 0;
   let currentMonthHours = 0;
+  let currentMonthPayableHours = 0;
+  let cumulativeCycleHours = Math.max(0, Number(youth.manualHoursAdjustment ?? 0));
 
   for (const report of approvedReports) {
     if (!isReportInCurrentCycle(report.date, referenceDate)) {
       continue;
     }
 
+    const payableBeforeReport = Math.max(0, cumulativeCycleHours - MANDATORY_HOURS_LIMIT);
+    cumulativeCycleHours += report.totalHours;
+    const payableAfterReport = Math.max(0, cumulativeCycleHours - MANDATORY_HOURS_LIMIT);
+
     cycleApprovedHours += report.totalHours;
-
-    const mandatoryHoursForReport = Math.max(
-      0,
-      Math.min(MANDATORY_HOURS_LIMIT - mandatoryCompletedHours, report.totalHours),
-    );
-
-    mandatoryCompletedHours += mandatoryHoursForReport;
 
     if (isSameMonth(report.date, referenceDate)) {
       currentMonthHours += report.totalHours;
+      currentMonthPayableHours += payableAfterReport - payableBeforeReport;
     }
   }
 
   const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
-  const payableHoursFromReports = Math.max(0, cycleApprovedHours - MANDATORY_HOURS_LIMIT);
-  const payableCumulativeHours = Math.max(0, payableHoursFromReports + manualAdjustmentHours);
+  const effectiveCycleHours = Math.max(0, cycleApprovedHours + manualAdjustmentHours);
+  const payableCumulativeHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
   const payablePendingHours = Math.max(0, payableCumulativeHours - Number(youth.lastResetHours ?? 0));
   const hourlyRate = getYouthRate(youth, rates);
 
   return {
-    cycleApprovedHours,
-    mandatoryCompletedHours: Math.min(MANDATORY_HOURS_LIMIT, cycleApprovedHours),
+    cycleApprovedHours: effectiveCycleHours,
+    mandatoryCompletedHours: Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours),
     payableCumulativeHours,
     payablePendingHours,
     currentMonthHours,
+    currentMonthPayableHours,
     payablePendingAmount: payablePendingHours * hourlyRate,
     totalEarnedAmount: payableCumulativeHours * hourlyRate,
     manualAdjustmentHours,

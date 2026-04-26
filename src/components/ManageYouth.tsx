@@ -158,7 +158,7 @@ const ManageYouth = () => {
                       </div>
 
                       <div>
-                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">תיקון ידני לשעות</label>
+                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">שעות ידניות במחזור</label>
                         <input
                           id={`manual-hours-${youthItem.id}`}
                           className="field-input"
@@ -202,7 +202,7 @@ const ManageYouth = () => {
                           <div className="mt-2 text-xl font-semibold">{summary?.cycleApprovedHours.toFixed(1) ?? '0.0'}</div>
                         </div>
                         <div className="rounded-3xl bg-[rgba(236,241,251,0.9)] p-4">
-                          <div className="text-xs text-slate-500">תיקון ידני</div>
+                          <div className="text-xs text-slate-500">שעות ידניות</div>
                           <div className="mt-2 text-xl font-semibold">{Number(youthItem.manualHoursAdjustment ?? 0).toFixed(1)}</div>
                         </div>
                         <div className="rounded-3xl bg-[rgba(248,239,227,0.9)] p-4">
