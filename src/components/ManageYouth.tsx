@@ -51,6 +51,20 @@ const ManageYouth = () => {
     [reports, rates, youth],
   );
 
+  const pendingGuideApprovalsByYouthId = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    reports.forEach((report) => {
+      if (report.status !== 'pending' || report.approvalTarget !== 'guide') {
+        return;
+      }
+
+      counts.set(report.youthId, (counts.get(report.youthId) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [reports]);
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('למחוק את הנער ואת כל הדיווחים שלו?')) {
       return;
@@ -120,6 +134,7 @@ const ManageYouth = () => {
           <div className="grid gap-4 lg:grid-cols-2">
             {youth.map((youthItem) => {
               const summary = summaryById.get(youthItem.id);
+              const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(youthItem.id) ?? 0;
 
               return (
                 <div key={youthItem.id} className="plain-card plain-card-olive p-5">
@@ -187,7 +202,16 @@ const ManageYouth = () => {
                             <FiUser size={12} />
                             פרופיל נער
                           </div>
-                          <h3 className="text-xl font-semibold">{youthItem.name}</h3>
+                          <h3 className="inline-flex items-center gap-2 text-xl font-semibold">
+                            <span>{youthItem.name}</span>
+                            {pendingApprovalsCount > 0 ? (
+                              <span
+                                className="status-dot"
+                                title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                                aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                              />
+                            ) : null}
+                          </h3>
                           <p className="page-subtitle">גיל {calculateAge(youthItem.birthDate)} | תקציב {youthItem.personalBudgetNumber}</p>
                         </div>
                         <div className="chip chip-warm">

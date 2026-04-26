@@ -64,6 +64,20 @@ const GuideSummary = () => {
     [youthList, reports, rates],
   );
 
+  const pendingGuideApprovalsByYouthId = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    reports.forEach((report) => {
+      if (report.status !== 'pending' || report.approvalTarget !== 'guide') {
+        return;
+      }
+
+      counts.set(report.youthId, (counts.get(report.youthId) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [reports]);
+
   const selectedYouthReports = useMemo(
     () =>
       selectedYouth
@@ -80,13 +94,12 @@ const GuideSummary = () => {
     const csvContent =
       '\uFEFF' +
       [
-        ['שם', 'מספר תקציב', 'שעות החודש', 'לתשלום מהחודש', 'לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
+        ['שם', 'מספר תקציב', 'שעות החודש', 'לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
         ...summaryRows.map((row) =>
           [
             row.youth.name,
             row.youth.personalBudgetNumber,
             row.summary.currentMonthHours.toFixed(1),
-            row.summary.currentMonthPayableHours.toFixed(1),
             row.summary.payablePendingHours.toFixed(1),
             row.summary.payablePendingAmount.toFixed(2),
           ].map(escapeValue).join(','),
@@ -225,18 +238,40 @@ const GuideSummary = () => {
           ) : (
             <div className="table-shell">
               <table>
-                <thead><tr><th>שם</th><th>תקציב</th><th>החודש</th><th>מהחודש לתשלום</th><th>לתשלום</th><th>סכום</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>שם</th>
+                    <th>תקציב</th>
+                    <th>החודש</th>
+                    <th>לתשלום</th>
+                    <th>סכום</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {summaryRows.map((row) => (
-                    <tr key={row.youth.id} className="cursor-pointer" onClick={() => setSelectedYouth(row.youth)}>
-                      <td className="font-semibold">{row.youth.name}</td>
-                      <td>{row.youth.personalBudgetNumber}</td>
-                      <td>{row.summary.currentMonthHours.toFixed(1)}</td>
-                      <td>{row.summary.currentMonthPayableHours.toFixed(1)}</td>
-                      <td>{row.summary.payablePendingHours.toFixed(1)}</td>
-                      <td className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</td>
-                    </tr>
-                  ))}
+                  {summaryRows.map((row) => {
+                    const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(row.youth.id) ?? 0;
+
+                    return (
+                      <tr key={row.youth.id} className="cursor-pointer" onClick={() => setSelectedYouth(row.youth)}>
+                        <td className="font-semibold">
+                          <span className="inline-flex items-center gap-2">
+                            <span>{row.youth.name}</span>
+                            {pendingApprovalsCount > 0 ? (
+                              <span
+                                className="status-dot"
+                                title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                                aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                              />
+                            ) : null}
+                          </span>
+                        </td>
+                        <td>{row.youth.personalBudgetNumber}</td>
+                        <td>{row.summary.currentMonthHours.toFixed(1)}</td>
+                        <td>{row.summary.payablePendingHours.toFixed(1)}</td>
+                        <td className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
