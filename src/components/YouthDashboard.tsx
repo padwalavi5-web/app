@@ -8,6 +8,7 @@ import { buildYouthWorkSummary, MANDATORY_HOURS_LIMIT } from '../workSummary';
 
 const OTHER_BRANCH_NAME = 'אחר';
 
+// מחזירה את תאריך היום בפורמט שמתאים לשדה date בטופס.
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
 const statusLabels: Record<Report['status'], string> = {
@@ -45,6 +46,7 @@ const YouthDashboard = () => {
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const youthUser = currentUser?.role === 'youth' ? currentUser : null;
 
+  // טוענת את כל הנתונים שצריך למסך הנער ומוודאת שהמשתמש המחובר עדיין קיים.
   const loadData = useCallback(async () => {
     if (!youthUser) {
       return;
@@ -110,6 +112,7 @@ const YouthDashboard = () => {
 
   const summary = useMemo(() => (youth ? buildYouthWorkSummary(youth, reports, rates) : null), [youth, reports, rates]);
 
+  // שומרת דיווח חדש אחרי בדיקות תקינות בסיסיות של הטופס והשעות.
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 

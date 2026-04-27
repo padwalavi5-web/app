@@ -27,6 +27,7 @@ const GuideSummary = () => {
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
+  // טוענת את כל הנתונים הדרושים למסך הסיכום של המדריך.
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
@@ -89,6 +90,7 @@ const GuideSummary = () => {
     [reports, selectedYouth],
   );
 
+  // מייצאת את טבלת הסיכום לקובץ CSV.
   const exportCsv = () => {
     const escapeValue = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
     const csvContent =
@@ -115,6 +117,7 @@ const GuideSummary = () => {
     URL.revokeObjectURL(url);
   };
 
+  // מייצאת את הנתונים ומאפסת רק את יתרת התשלום החודשית, בלי לאפס את 90 שעות החובה.
   const handleExportAndReset = async () => {
     if (!summaryRows.length) {
       alert('אין נתונים לייצוא.');
@@ -129,8 +132,8 @@ const GuideSummary = () => {
       }));
 
     const paidReportIds = reports
-      .filter((r): r is Report & { id: string } => r.status === 'approved' && Boolean(r.id))
-      .map((r) => r.id);
+      .filter((report): report is Report & { id: string } => report.status === 'approved' && Boolean(report.id))
+      .map((report) => report.id);
 
     if (youthUpdates.length === 0) {
       alert('אין נתונים תקינים לעדכון.');
@@ -155,6 +158,7 @@ const GuideSummary = () => {
     }
   };
 
+  // מאשרת דיווח שממתין לאישור מדריך.
   const handleApprove = async (reportId?: string) => {
     if (!reportId) {
       return;
@@ -169,6 +173,7 @@ const GuideSummary = () => {
     }
   };
 
+  // דוחה דיווח ושומרת סיבת דחייה.
   const handleReject = async () => {
     if (!selectedReport?.id || !rejectNote.trim()) {
       return;
@@ -234,7 +239,9 @@ const GuideSummary = () => {
           </div>
 
           {summaryRows.length === 0 ? (
-            <div className="empty-state py-6"><p className="page-subtitle">אין נתונים</p></div>
+            <div className="empty-state py-6">
+              <p className="page-subtitle">אין נתונים</p>
+            </div>
           ) : (
             <div className="table-shell">
               <table>
