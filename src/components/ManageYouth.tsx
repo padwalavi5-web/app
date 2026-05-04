@@ -1,28 +1,49 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight, FiClock, FiEdit3, FiSave, FiTrash2, FiUser } from 'react-icons/fi';
 import { calculateAge, deleteYouth, getCurrentUser, getRates, getReports, getYouth, updateYouth } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
-import { buildYouthWorkSummary } from '../workSummary';
+import { buildYouthHoursUpdate, buildYouthWorkSummary } from '../workSummary';
+
+interface HoursDraft {
+  mandatoryHours: string;
+  payableHours: string;
+}
+
+// Build the default editable hour values from the current summary.
+const createHoursDraft = (summary?: ReturnType<typeof buildYouthWorkSummary>): HoursDraft => ({
+  mandatoryHours: summary?.mandatoryCompletedHours.toFixed(1) ?? '0.0',
+  payableHours: summary?.payablePendingHours.toFixed(1) ?? '0.0',
+});
+
+// Parse a numeric input while treating empty or invalid values as zero.
+const parseHourInput = (value: string) => {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+};
 
 const ManageYouth = () => {
   const [youth, setYouth] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingHoursId, setSavingHoursId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Youth>>({});
+  const [hoursDraftById, setHoursDraftById] = useState<Record<string, HoursDraft>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
+  // Load youth, reports, and rates for the guide management screen.
   const fetchYouthData = useCallback(async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true);
     } else {
       setIsRefreshing(true);
     }
+
     try {
       const [youthData, reportData, rateData] = await Promise.all([getYouth(), getReports(), getRates()]);
       setYouth(youthData);
@@ -65,6 +86,27 @@ const ManageYouth = () => {
     return counts;
   }, [reports]);
 
+  // Return the current editable hour draft for a youth card.
+  const getHoursDraft = useCallback(
+    (youthId: string) => hoursDraftById[youthId] ?? createHoursDraft(summaryById.get(youthId)),
+    [hoursDraftById, summaryById],
+  );
+
+  // Update one visible hour field without touching the hidden storage model yet.
+  const handleHoursDraftChange = useCallback(
+    (youthId: string, field: keyof HoursDraft, value: string) => {
+      setHoursDraftById((current) => ({
+        ...current,
+        [youthId]: {
+          ...(current[youthId] ?? createHoursDraft(summaryById.get(youthId))),
+          [field]: value,
+        },
+      }));
+    },
+    [summaryById],
+  );
+
+  // Delete a youth and all related reports after confirmation.
   const handleDelete = async (id: string) => {
     if (!window.confirm('למחוק את הנער ואת כל הדיווחים שלו?')) {
       return;
@@ -79,11 +121,13 @@ const ManageYouth = () => {
     }
   };
 
+  // Open the personal-details editor for one youth.
   const startEdit = (youthItem: Youth) => {
     setEditingId(youthItem.id);
     setEditFormData(youthItem);
   };
 
+  // Save only the personal details shown in the edit form.
   const handleSaveEdit = async () => {
     if (!editingId) {
       return;
@@ -94,7 +138,6 @@ const ManageYouth = () => {
         name: String(editFormData.name ?? '').trim(),
         birthDate: editFormData.birthDate,
         personalBudgetNumber: String(editFormData.personalBudgetNumber ?? '').trim(),
-        manualHoursAdjustment: Number(editFormData.manualHoursAdjustment ?? 0),
       });
       await fetchYouthData();
       setEditingId(null);
@@ -102,6 +145,39 @@ const ManageYouth = () => {
     } catch (error) {
       console.error('Error updating youth:', error);
       alert('עדכון הנער נכשל.');
+    }
+  };
+
+  // Save the guide-edited mandatory/payable hours and translate them into the hidden adjustment field.
+  const handleSaveHours = async (youthItem: Youth) => {
+    const hoursDraft = getHoursDraft(youthItem.id);
+    const hoursUpdate = buildYouthHoursUpdate(
+      youthItem,
+      reports,
+      parseHourInput(hoursDraft.mandatoryHours),
+      parseHourInput(hoursDraft.payableHours),
+    );
+
+    setSavingHoursId(youthItem.id);
+    try {
+      await updateYouth(youthItem.id, {
+        manualHoursAdjustment: hoursUpdate.manualHoursAdjustment,
+      });
+
+      setHoursDraftById((current) => ({
+        ...current,
+        [youthItem.id]: {
+          mandatoryHours: hoursUpdate.mandatoryHours.toFixed(1),
+          payableHours: hoursUpdate.payableHours.toFixed(1),
+        },
+      }));
+
+      await fetchYouthData();
+    } catch (error) {
+      console.error('Error updating youth hours:', error);
+      alert('עדכון השעות נכשל.');
+    } finally {
+      setSavingHoursId(null);
     }
   };
 
@@ -135,6 +211,7 @@ const ManageYouth = () => {
             {youth.map((youthItem) => {
               const summary = summaryById.get(youthItem.id);
               const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(youthItem.id) ?? 0;
+              const hoursDraft = getHoursDraft(youthItem.id);
 
               return (
                 <div key={youthItem.id} className="plain-card plain-card-olive p-5">
@@ -169,18 +246,6 @@ const ManageYouth = () => {
                           type="text"
                           value={editFormData.personalBudgetNumber || ''}
                           onChange={(event) => setEditFormData({ ...editFormData, personalBudgetNumber: event.target.value })}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`manual-hours-${youthItem.id}`} className="field-label">שעות ידניות לשנת העבודה</label>
-                        <input
-                          id={`manual-hours-${youthItem.id}`}
-                          className="field-input"
-                          type="number"
-                          step="0.5"
-                          value={String(editFormData.manualHoursAdjustment ?? 0)}
-                          onChange={(event) => setEditFormData({ ...editFormData, manualHoursAdjustment: Number(event.target.value) })}
                         />
                       </div>
 
@@ -220,25 +285,50 @@ const ManageYouth = () => {
                         </div>
                       </div>
 
-                      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-3xl bg-[rgba(230,244,236,0.9)] p-4">
-                          <div className="text-xs text-slate-500">שעות בשנת העבודה</div>
-                          <div className="mt-2 text-xl font-semibold">{summary?.cycleApprovedHours.toFixed(1) ?? '0.0'}</div>
+                      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-3xl bg-[rgba(248,239,227,0.9)] p-4">
+                          <label htmlFor={`mandatory-hours-${youthItem.id}`} className="field-label mb-1">שעות חובה</label>
+                          <input
+                            id={`mandatory-hours-${youthItem.id}`}
+                            className="field-input"
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={hoursDraft.mandatoryHours}
+                            onChange={(event) => handleHoursDraftChange(youthItem.id, 'mandatoryHours', event.target.value)}
+                          />
                         </div>
                         <div className="rounded-3xl bg-[rgba(236,241,251,0.9)] p-4">
-                          <div className="text-xs text-slate-500">שעות ידניות</div>
-                          <div className="mt-2 text-xl font-semibold">{Number(youthItem.manualHoursAdjustment ?? 0).toFixed(1)}</div>
-                        </div>
-                        <div className="rounded-3xl bg-[rgba(248,239,227,0.9)] p-4">
-                          <div className="text-xs text-slate-500">שעות חובה</div>
-                          <div className="mt-2 text-xl font-semibold">{summary?.mandatoryCompletedHours.toFixed(1) ?? '0.0'}</div>
+                          <label htmlFor={`payable-hours-${youthItem.id}`} className="field-label mb-1">שעות לתשלום</label>
+                          <input
+                            id={`payable-hours-${youthItem.id}`}
+                            className="field-input"
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={hoursDraft.payableHours}
+                            onChange={(event) => handleHoursDraftChange(youthItem.id, 'payableHours', event.target.value)}
+                          />
                         </div>
                       </div>
 
+                      <p className="mb-4 text-sm text-slate-500">
+                        המערכת תמלא קודם שעות חובה עד 90, וכל יתרה תעבור אוטומטית לשעות לתשלום.
+                      </p>
+
                       <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveHours(youthItem)}
+                          className="btn-olive flex-1"
+                          disabled={savingHoursId === youthItem.id}
+                        >
+                          <FiSave size={16} />
+                          {savingHoursId === youthItem.id ? 'שומר...' : 'שמור שעות'}
+                        </button>
                         <button type="button" onClick={() => startEdit(youthItem)} className="btn-sky flex-1">
                           <FiEdit3 size={16} />
-                          ערוך
+                          ערוך פרטים
                         </button>
                         <button type="button" onClick={() => void handleDelete(youthItem.id)} className="btn-danger flex-1">
                           <FiTrash2 size={16} />

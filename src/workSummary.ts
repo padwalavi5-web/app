@@ -3,51 +3,16 @@ import { calculateAge } from './data';
 
 export const MANDATORY_HOURS_LIMIT = 90;
 
-// ממירה תאריך טקסטואלי לאובייקט Date מקומי כדי להשוות חודשים ומחזורי עבודה.
-const parseLocalDate = (value: string) => {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
-};
+export interface EditableYouthHours {
+  mandatoryHours: number;
+  payableHours: number;
+}
 
-// מחזירה את תחילת שנת העבודה הנוכחית, שתמיד מתחילה ב-1 ביולי.
-export const getWorkCycleStart = (referenceDate = new Date()) => {
-  const year = referenceDate.getMonth() >= 6 ? referenceDate.getFullYear() : referenceDate.getFullYear() - 1;
-  return new Date(year, 6, 1);
-};
-
-// בודקת אם דיווח שייך לשנת העבודה הנוכחית שהתחילה ב-1 ביולי.
-export const isReportInCurrentCycle = (reportDate: string, referenceDate = new Date()) =>
-  parseLocalDate(reportDate).getTime() >= getWorkCycleStart(referenceDate).getTime();
-
-// בודקת אם דיווח שייך לחודש הנוכחי.
-const isSameMonth = (reportDate: string, referenceDate = new Date()) => {
-  const date = parseLocalDate(reportDate);
-  return date.getFullYear() === referenceDate.getFullYear() && date.getMonth() === referenceDate.getMonth();
-};
-
-// מחזירה את התעריף השעתי לפי גיל הנער.
-const getYouthRate = (youth: Youth, rates: HourlyRate[]) => {
-  const age = calculateAge(youth.birthDate);
-  const matchedRate = rates.find((rate) => rate.age === age);
-  return matchedRate?.rate ?? 0;
-};
-
-// ממיינת דיווחים לפי תאריך ושעת התחלה כדי לאפשר חישוב מצטבר יציב.
-const sortReportsByDate = (reports: Report[]) =>
-  reports
-    .slice()
-    .sort((left, right) => `${left.date}T${left.startTime}`.localeCompare(`${right.date}T${right.startTime}`));
-
-// מחזירה את כל הדיווחים המאושרים או שכבר שולמו בתוך שנת העבודה הנוכחית.
-const getCycleTrackedReports = (youthId: string, reports: Report[], referenceDate: Date) =>
-  sortReportsByDate(
-    reports.filter(
-      (report) =>
-        report.youthId === youthId &&
-        (report.status === 'approved' || report.status === 'paid') &&
-        isReportInCurrentCycle(report.date, referenceDate),
-    ),
-  );
+export interface YouthHoursUpdate {
+  mandatoryHours: number;
+  payableHours: number;
+  manualHoursAdjustment: number;
+}
 
 export interface YouthWorkSummary {
   cycleApprovedHours: number;
@@ -61,7 +26,90 @@ export interface YouthWorkSummary {
   manualAdjustmentHours: number;
 }
 
-// בונה סיכום שעות ותשלום לנער, כשהחובה מתאפסת רק בתחילת יולי והתשלום מתאפס באיפוס החודשי.
+// Parse a local YYYY-MM-DD string without timezone drift.
+const parseLocalDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+
+// Return the beginning of the current work cycle, which always starts on July 1st.
+export const getWorkCycleStart = (referenceDate = new Date()) => {
+  const year = referenceDate.getMonth() >= 6 ? referenceDate.getFullYear() : referenceDate.getFullYear() - 1;
+  return new Date(year, 6, 1);
+};
+
+// Check whether a report belongs to the current July-to-June work cycle.
+export const isReportInCurrentCycle = (reportDate: string, referenceDate = new Date()) =>
+  parseLocalDate(reportDate).getTime() >= getWorkCycleStart(referenceDate).getTime();
+
+// Keep editable hour inputs numeric and non-negative.
+const toNonNegativeNumber = (value: number) => (Number.isFinite(value) ? Math.max(0, value) : 0);
+
+// Check whether a report belongs to the current calendar month.
+const isSameMonth = (reportDate: string, referenceDate = new Date()) => {
+  const date = parseLocalDate(reportDate);
+  return date.getFullYear() === referenceDate.getFullYear() && date.getMonth() === referenceDate.getMonth();
+};
+
+// Resolve the hourly rate by the youth's current age.
+const getYouthRate = (youth: Youth, rates: HourlyRate[]) => {
+  const age = calculateAge(youth.birthDate);
+  const matchedRate = rates.find((rate) => rate.age === age);
+  return matchedRate?.rate ?? 0;
+};
+
+// Sort reports so cumulative hour calculations stay deterministic.
+const sortReportsByDate = (reports: Report[]) =>
+  reports
+    .slice()
+    .sort((left, right) => `${left.date}T${left.startTime}`.localeCompare(`${right.date}T${right.startTime}`));
+
+// Return all approved or paid reports from the current work cycle for one youth.
+const getCycleTrackedReports = (youthId: string, reports: Report[], referenceDate: Date) =>
+  sortReportsByDate(
+    reports.filter(
+      (report) =>
+        report.youthId === youthId &&
+        (report.status === 'approved' || report.status === 'paid') &&
+        isReportInCurrentCycle(report.date, referenceDate),
+    ),
+  );
+
+// Sum tracked report hours inside the current work cycle.
+const getCycleTrackedHours = (youthId: string, reports: Report[], referenceDate: Date) =>
+  getCycleTrackedReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
+
+// Normalize guide-edited hours so mandatory hours fill first up to 90 and only the remainder becomes payable.
+export const normalizeEditableHours = (mandatoryHours: number, payableHours: number): EditableYouthHours => {
+  const totalVisibleHours = toNonNegativeNumber(mandatoryHours) + toNonNegativeNumber(payableHours);
+
+  return {
+    mandatoryHours: Math.min(MANDATORY_HOURS_LIMIT, totalVisibleHours),
+    payableHours: Math.max(0, totalVisibleHours - MANDATORY_HOURS_LIMIT),
+  };
+};
+
+// Convert guide-edited visible hours into the hidden manual adjustment used by the summary engine.
+export const buildYouthHoursUpdate = (
+  youth: Youth,
+  reports: Report[],
+  mandatoryHours: number,
+  payableHours: number,
+  referenceDate = new Date(),
+): YouthHoursUpdate => {
+  const normalizedHours = normalizeEditableHours(mandatoryHours, payableHours);
+  const cycleTrackedHours = getCycleTrackedHours(youth.id, reports, referenceDate);
+  const alreadyPaidPayableHours = toNonNegativeNumber(Number(youth.lastResetHours ?? 0));
+  const desiredEffectiveCycleHours =
+    normalizedHours.mandatoryHours + normalizedHours.payableHours + alreadyPaidPayableHours;
+
+  return {
+    ...normalizedHours,
+    manualHoursAdjustment: desiredEffectiveCycleHours - cycleTrackedHours,
+  };
+};
+
+// Build the guide/youth summary while keeping July 1st as the only reset point for mandatory hours.
 export const buildYouthWorkSummary = (
   youth: Youth,
   reports: Report[],
@@ -69,7 +117,7 @@ export const buildYouthWorkSummary = (
   referenceDate = new Date(),
 ): YouthWorkSummary => {
   const cycleTrackedReports = getCycleTrackedReports(youth.id, reports, referenceDate);
-  const manualAdjustmentHours = Math.max(0, Number(youth.manualHoursAdjustment ?? 0));
+  const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
 
   let cycleTrackedHours = 0;
   let currentMonthHours = 0;
@@ -89,9 +137,9 @@ export const buildYouthWorkSummary = (
     }
   }
 
-  const effectiveCycleHours = cycleTrackedHours + manualAdjustmentHours;
+  const effectiveCycleHours = Math.max(0, cycleTrackedHours + manualAdjustmentHours);
   const payableCumulativeHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
-  const payablePendingHours = Math.max(0, payableCumulativeHours - Number(youth.lastResetHours ?? 0));
+  const payablePendingHours = Math.max(0, payableCumulativeHours - toNonNegativeNumber(Number(youth.lastResetHours ?? 0)));
   const hourlyRate = getYouthRate(youth, rates);
 
   return {
