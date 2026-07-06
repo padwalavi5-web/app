@@ -10,6 +10,25 @@ interface HoursDraft {
   payableHours: string;
 }
 
+type EditableYouthField = 'name' | 'birthDate' | 'personalBudgetNumber' | 'mandatoryHours' | 'payableHours';
+
+const reportStatusLabel: Record<Report['status'], string> = {
+  pending: 'ממתין',
+  approved: 'אושר',
+  rejected: 'נדחה',
+  paid: 'שולם',
+};
+
+interface EditModalState {
+  youthId: string;
+  field: EditableYouthField;
+  label: string;
+  type: 'text' | 'date' | 'number';
+  value: string;
+  helper: string;
+  baseHours?: HoursDraft;
+}
+
 // Build the default editable hour values from the current summary.
 const createHoursDraft = (summary?: ReturnType<typeof buildYouthWorkSummary>): HoursDraft => ({
   mandatoryHours: summary?.mandatoryCompletedHours.toFixed(1) ?? '0.0',
@@ -22,14 +41,80 @@ const parseHourInput = (value: string) => {
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
 
+const getEditModalState = (
+  youthItem: Youth,
+  field: EditableYouthField,
+  summary?: ReturnType<typeof buildYouthWorkSummary>,
+): EditModalState => {
+  const hoursDraft = createHoursDraft(summary);
+
+  switch (field) {
+    case 'name':
+      return {
+        youthId: youthItem.id,
+        field,
+        label: 'שם מלא',
+        type: 'text',
+        value: youthItem.name,
+        helper: 'השם שיופיע בכרטיס הנוער וברשימות.',
+      };
+    case 'birthDate':
+      return {
+        youthId: youthItem.id,
+        field,
+        label: 'תאריך לידה',
+        type: 'date',
+        value: youthItem.birthDate,
+        helper: 'עדכון התאריך ישפיע גם על חישוב הגיל והמסלול.',
+      };
+    case 'personalBudgetNumber':
+      return {
+        youthId: youthItem.id,
+        field,
+        label: 'מספר תקציב',
+        type: 'text',
+        value: youthItem.personalBudgetNumber,
+        helper: 'מספר התקציב האישי של הנער.',
+      };
+    case 'mandatoryHours':
+      return {
+        youthId: youthItem.id,
+        field,
+        label: 'שעות חובה',
+        type: 'number',
+        value: hoursDraft.mandatoryHours,
+        helper: 'הערך הזה מתעדכן דרך חלונית אחת, ובאישור הוא נשמר אוטומטית.',
+        baseHours: hoursDraft,
+      };
+    case 'payableHours':
+      return {
+        youthId: youthItem.id,
+        field,
+        label: 'שעות לתשלום',
+        type: 'number',
+        value: hoursDraft.payableHours,
+        helper: 'הערך הזה מתעדכן דרך חלונית אחת, ובאישור הוא נשמר אוטומטית.',
+        baseHours: hoursDraft,
+      };
+    default:
+      return {
+        youthId: youthItem.id,
+        field: 'name',
+        label: 'שם מלא',
+        type: 'text',
+        value: youthItem.name,
+        helper: 'השם שיופיע בכרטיס הנוער וברשימות.',
+      };
+  }
+};
+
 const ManageYouth = () => {
   const [youth, setYouth] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [savingHoursId, setSavingHoursId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<Youth>>({});
-  const [hoursDraftById, setHoursDraftById] = useState<Record<string, HoursDraft>>({});
+  const [selectedYouthId, setSelectedYouthId] = useState<string | null>(null);
+  const [editModal, setEditModal] = useState<EditModalState | null>(null);
+  const [savingField, setSavingField] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
@@ -72,6 +157,27 @@ const ManageYouth = () => {
     [reports, rates, youth],
   );
 
+  const selectedYouth = useMemo(
+    () => youth.find((item) => item.id === selectedYouthId) ?? null,
+    [selectedYouthId, youth],
+  );
+
+  const selectedYouthSummary = useMemo(
+    () => (selectedYouth ? summaryById.get(selectedYouth.id) : undefined),
+    [selectedYouth, summaryById],
+  );
+
+  const selectedYouthReports = useMemo(
+    () =>
+      selectedYouth
+        ? reports
+            .filter((report) => report.youthId === selectedYouth.id)
+            .slice()
+            .sort((left, right) => `${right.date}T${right.startTime}`.localeCompare(`${left.date}T${left.startTime}`))
+        : [],
+    [reports, selectedYouth],
+  );
+
   const pendingGuideApprovalsByYouthId = useMemo(() => {
     const counts = new Map<string, number>();
 
@@ -86,26 +192,6 @@ const ManageYouth = () => {
     return counts;
   }, [reports]);
 
-  // Return the current editable hour draft for a youth card.
-  const getHoursDraft = useCallback(
-    (youthId: string) => hoursDraftById[youthId] ?? createHoursDraft(summaryById.get(youthId)),
-    [hoursDraftById, summaryById],
-  );
-
-  // Update one visible hour field without touching the hidden storage model yet.
-  const handleHoursDraftChange = useCallback(
-    (youthId: string, field: keyof HoursDraft, value: string) => {
-      setHoursDraftById((current) => ({
-        ...current,
-        [youthId]: {
-          ...(current[youthId] ?? createHoursDraft(summaryById.get(youthId))),
-          [field]: value,
-        },
-      }));
-    },
-    [summaryById],
-  );
-
   // Delete a youth and all related reports after confirmation.
   const handleDelete = async (id: string) => {
     if (!window.confirm('למחוק את הנער ואת כל הדיווחים שלו?')) {
@@ -114,6 +200,7 @@ const ManageYouth = () => {
 
     try {
       await deleteYouth(id);
+      setSelectedYouthId(null);
       await fetchYouthData();
     } catch (error) {
       console.error('Error deleting youth:', error);
@@ -121,63 +208,68 @@ const ManageYouth = () => {
     }
   };
 
-  // Open the personal-details editor for one youth.
-  const startEdit = (youthItem: Youth) => {
-    setEditingId(youthItem.id);
-    setEditFormData(youthItem);
+  // Open the field editor for one youth datum.
+  const startEdit = (youthItem: Youth, field: EditableYouthField) => {
+    setEditModal(getEditModalState(youthItem, field, summaryById.get(youthItem.id)));
   };
 
-  // Save only the personal details shown in the edit form.
+  const closeDetailModal = () => {
+    setSelectedYouthId(null);
+  };
+
+  const closeEditModal = () => {
+    setEditModal(null);
+  };
+
+  // Save one datum from the popup editor.
   const handleSaveEdit = async () => {
-    if (!editingId) {
+    if (!editModal) {
       return;
     }
 
+    const youthItem = youth.find((item) => item.id === editModal.youthId);
+    if (!youthItem) {
+      return;
+    }
+
+    setSavingField(true);
     try {
-      await updateYouth(editingId, {
-        name: String(editFormData.name ?? '').trim(),
-        birthDate: editFormData.birthDate,
-        personalBudgetNumber: String(editFormData.personalBudgetNumber ?? '').trim(),
-      });
+      if (editModal.field === 'name' || editModal.field === 'birthDate' || editModal.field === 'personalBudgetNumber') {
+        const updates: Partial<Youth> = {};
+
+        if (editModal.field === 'name') {
+          updates.name = String(editModal.value ?? '').trim();
+        }
+
+        if (editModal.field === 'birthDate') {
+          updates.birthDate = editModal.value;
+        }
+
+        if (editModal.field === 'personalBudgetNumber') {
+          updates.personalBudgetNumber = String(editModal.value ?? '').trim();
+        }
+
+        await updateYouth(editModal.youthId, updates);
+      } else {
+        const baseHours = editModal.baseHours ?? createHoursDraft(summaryById.get(editModal.youthId));
+        const nextMandatoryHours =
+          editModal.field === 'mandatoryHours' ? parseHourInput(editModal.value) : parseHourInput(baseHours.mandatoryHours);
+        const nextPayableHours =
+          editModal.field === 'payableHours' ? parseHourInput(editModal.value) : parseHourInput(baseHours.payableHours);
+        const hoursUpdate = buildYouthHoursUpdate(youthItem, reports, nextMandatoryHours, nextPayableHours);
+
+        await updateYouth(editModal.youthId, {
+          manualHoursAdjustment: hoursUpdate.manualHoursAdjustment,
+        });
+      }
+
       await fetchYouthData();
-      setEditingId(null);
-      setEditFormData({});
+      setEditModal(null);
     } catch (error) {
       console.error('Error updating youth:', error);
       alert('עדכון הנער נכשל.');
-    }
-  };
-
-  // Save the guide-edited mandatory/payable hours and translate them into the hidden adjustment field.
-  const handleSaveHours = async (youthItem: Youth) => {
-    const hoursDraft = getHoursDraft(youthItem.id);
-    const hoursUpdate = buildYouthHoursUpdate(
-      youthItem,
-      reports,
-      parseHourInput(hoursDraft.mandatoryHours),
-      parseHourInput(hoursDraft.payableHours),
-    );
-
-    setSavingHoursId(youthItem.id);
-    try {
-      await updateYouth(youthItem.id, {
-        manualHoursAdjustment: hoursUpdate.manualHoursAdjustment,
-      });
-
-      setHoursDraftById((current) => ({
-        ...current,
-        [youthItem.id]: {
-          mandatoryHours: hoursUpdate.mandatoryHours.toFixed(1),
-          payableHours: hoursUpdate.payableHours.toFixed(1),
-        },
-      }));
-
-      await fetchYouthData();
-    } catch (error) {
-      console.error('Error updating youth hours:', error);
-      alert('עדכון השעות נכשל.');
     } finally {
-      setSavingHoursId(null);
+      setSavingField(false);
     }
   };
 
@@ -199,7 +291,7 @@ const ManageYouth = () => {
               <h1 className="page-title mb-0">נוער</h1>
             </div>
             <div className="toolbar">
-              {isRefreshing ? <div className="chip chip-info">מעדכן...</div> : null}
+              {isRefreshing ? <div className="chip chip-info">מרענן...</div> : null}
               <button type="button" onClick={() => navigate('/guide')} className="btn-sky">
                 <FiArrowRight size={18} />
                 חזור לסיכום
@@ -211,138 +303,224 @@ const ManageYouth = () => {
             {youth.map((youthItem) => {
               const summary = summaryById.get(youthItem.id);
               const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(youthItem.id) ?? 0;
-              const hoursDraft = getHoursDraft(youthItem.id);
 
               return (
-                <div key={youthItem.id} className="plain-card plain-card-olive p-5">
-                  {editingId === youthItem.id ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label htmlFor={`name-${youthItem.id}`} className="field-label">שם מלא</label>
-                        <input
-                          id={`name-${youthItem.id}`}
-                          className="field-input"
-                          value={editFormData.name || ''}
-                          onChange={(event) => setEditFormData({ ...editFormData, name: event.target.value })}
-                        />
+                <button
+                  key={youthItem.id}
+                  type="button"
+                  onClick={() => setSelectedYouthId(youthItem.id)}
+                  className="plain-card plain-card-olive w-full p-5 text-right transition duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="chip mb-2">
+                        <FiUser size={12} />
+                        פרופיל נוער
                       </div>
-
-                      <div>
-                        <label htmlFor={`date-${youthItem.id}`} className="field-label">תאריך לידה</label>
-                        <input
-                          id={`date-${youthItem.id}`}
-                          className="field-input"
-                          type="date"
-                          value={editFormData.birthDate || ''}
-                          onChange={(event) => setEditFormData({ ...editFormData, birthDate: event.target.value })}
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor={`budget-${youthItem.id}`} className="field-label">מספר תקציב</label>
-                        <input
-                          id={`budget-${youthItem.id}`}
-                          className="field-input"
-                          type="text"
-                          value={editFormData.personalBudgetNumber || ''}
-                          onChange={(event) => setEditFormData({ ...editFormData, personalBudgetNumber: event.target.value })}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button type="button" onClick={handleSaveEdit} className="btn-olive flex-1">
-                          <FiSave size={16} />
-                          שמור
-                        </button>
-                        <button type="button" onClick={() => setEditingId(null)} className="btn-sand flex-1">
-                          ביטול
-                        </button>
-                      </div>
+                      <h3 className="inline-flex items-center gap-2 text-xl font-semibold">
+                        <span>{youthItem.name}</span>
+                        {pendingApprovalsCount > 0 ? (
+                          <span
+                            className="status-dot"
+                            title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                            aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                          />
+                        ) : null}
+                      </h3>
+                      <p className="page-subtitle">גיל {calculateAge(youthItem.birthDate)} | תקציב {youthItem.personalBudgetNumber}</p>
                     </div>
-                  ) : (
-                    <>
-                      <div className="mb-4 flex items-start justify-between gap-4">
-                        <div>
-                          <div className="chip mb-3">
-                            <FiUser size={12} />
-                            פרופיל נער
-                          </div>
-                          <h3 className="inline-flex items-center gap-2 text-xl font-semibold">
-                            <span>{youthItem.name}</span>
-                            {pendingApprovalsCount > 0 ? (
-                              <span
-                                className="status-dot"
-                                title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
-                                aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
-                              />
-                            ) : null}
-                          </h3>
-                          <p className="page-subtitle">גיל {calculateAge(youthItem.birthDate)} | תקציב {youthItem.personalBudgetNumber}</p>
-                        </div>
-                        <div className="chip chip-warm">
-                          <FiClock size={12} />
-                          {summary?.payablePendingHours.toFixed(1) ?? '0.0'} שעות לתשלום
-                        </div>
-                      </div>
+                    <div className="chip chip-warm">
+                      <FiClock size={12} />
+                      {summary?.payablePendingHours.toFixed(1) ?? '0.0'} שעות לתשלום
+                    </div>
+                  </div>
 
-                      <div className="mb-4 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-3xl bg-[rgba(248,239,227,0.9)] p-4">
-                          <label htmlFor={`mandatory-hours-${youthItem.id}`} className="field-label mb-1">שעות חובה</label>
-                          <input
-                            id={`mandatory-hours-${youthItem.id}`}
-                            className="field-input"
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            value={hoursDraft.mandatoryHours}
-                            onChange={(event) => handleHoursDraftChange(youthItem.id, 'mandatoryHours', event.target.value)}
-                          />
-                        </div>
-                        <div className="rounded-3xl bg-[rgba(236,241,251,0.9)] p-4">
-                          <label htmlFor={`payable-hours-${youthItem.id}`} className="field-label mb-1">שעות לתשלום</label>
-                          <input
-                            id={`payable-hours-${youthItem.id}`}
-                            className="field-input"
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            value={hoursDraft.payableHours}
-                            onChange={(event) => handleHoursDraftChange(youthItem.id, 'payableHours', event.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <p className="mb-4 text-sm text-slate-500">
-                        המערכת תמלא קודם שעות חובה עד 90, וכל יתרה תעבור אוטומטית לשעות לתשלום.
-                      </p>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveHours(youthItem)}
-                          className="btn-olive flex-1"
-                          disabled={savingHoursId === youthItem.id}
-                        >
-                          <FiSave size={16} />
-                          {savingHoursId === youthItem.id ? 'שומר...' : 'שמור שעות'}
-                        </button>
-                        <button type="button" onClick={() => startEdit(youthItem)} className="btn-sky flex-1">
-                          <FiEdit3 size={16} />
-                          ערוך פרטים
-                        </button>
-                        <button type="button" onClick={() => void handleDelete(youthItem.id)} className="btn-danger flex-1">
-                          <FiTrash2 size={16} />
-                          מחק
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  <div className="flex flex-wrap gap-2">
+                    <div className="chip chip-info">
+                      <FiEdit3 size={12} />
+                      לחיצה תפתח פרטים ועריכה
+                    </div>
+                    {pendingApprovalsCount > 0 ? <div className="chip chip-danger">{pendingApprovalsCount} לאישור</div> : null}
+                  </div>
+                </button>
               );
             })}
           </div>
         </section>
       </div>
+
+      {selectedYouth ? (
+        <div className="modal-backdrop" dir="rtl" onClick={closeDetailModal}>
+          <div className="modal-panel max-w-4xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="chip mb-3">
+                  <FiUser size={12} />
+                  פרטי נוער
+                </div>
+                <h2 className="section-title">{selectedYouth.name}</h2>
+                <p className="page-subtitle">
+                  גיל {calculateAge(selectedYouth.birthDate)} | תקציב {selectedYouth.personalBudgetNumber}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => void handleDelete(selectedYouth.id)} className="btn-danger px-3 py-2">
+                  <FiTrash2 size={16} />
+                  מחיקה
+                </button>
+                <button type="button" onClick={closeDetailModal} className="btn-sand px-3 py-2">
+                  סגור
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="plain-card plain-card-sky p-4">
+                <div className="page-subtitle text-sm">דיווחים שממתינים</div>
+                <div className="mt-2 text-2xl font-semibold">
+                  {pendingGuideApprovalsByYouthId.get(selectedYouth.id) ?? 0}
+                </div>
+              </div>
+              <div className="plain-card plain-card-sand p-4">
+                <div className="page-subtitle text-sm">שעות לתשלום</div>
+                <div className="mt-2 text-2xl font-semibold">{selectedYouthSummary?.payablePendingHours.toFixed(1) ?? '0.0'}</div>
+              </div>
+              <div className="plain-card plain-card-olive p-4">
+                <div className="page-subtitle text-sm">שעות החודש</div>
+                <div className="mt-2 text-2xl font-semibold">{selectedYouthSummary?.currentMonthHours.toFixed(1) ?? '0.0'}</div>
+              </div>
+              <div className="plain-card plain-card-rose p-4">
+                <div className="page-subtitle text-sm">שעות התנדבות</div>
+                <div className="mt-2 text-2xl font-semibold">
+                  {selectedYouthSummary?.volunteerCompletedHours.toFixed(1) ?? '0.0'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold">נתונים לעריכה</h3>
+                <p className="page-subtitle">לחיצה על כל נתון פותחת חלונית עריכה עם אישור או ביטול.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => startEdit(selectedYouth, 'name')}
+                className="plain-card plain-card-olive p-4 text-right transition duration-200 hover:-translate-y-0.5"
+              >
+                <div className="field-label">שם מלא</div>
+                <div className="text-lg font-semibold">{selectedYouth.name}</div>
+                <div className="page-subtitle mt-1 text-sm">לחיצה לעריכה</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => startEdit(selectedYouth, 'birthDate')}
+                className="plain-card plain-card-sky p-4 text-right transition duration-200 hover:-translate-y-0.5"
+              >
+                <div className="field-label">תאריך לידה</div>
+                <div className="text-lg font-semibold">{selectedYouth.birthDate}</div>
+                <div className="page-subtitle mt-1 text-sm">לחיצה לעריכה</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => startEdit(selectedYouth, 'personalBudgetNumber')}
+                className="plain-card plain-card-sand p-4 text-right transition duration-200 hover:-translate-y-0.5"
+              >
+                <div className="field-label">מספר תקציב</div>
+                <div className="text-lg font-semibold">{selectedYouth.personalBudgetNumber}</div>
+                <div className="page-subtitle mt-1 text-sm">לחיצה לעריכה</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => startEdit(selectedYouth, 'mandatoryHours')}
+                className="plain-card p-4 text-right transition duration-200 hover:-translate-y-0.5"
+              >
+                <div className="field-label">שעות חובה</div>
+                <div className="text-lg font-semibold">
+                  {createHoursDraft(selectedYouthSummary).mandatoryHours}
+                </div>
+                <div className="page-subtitle mt-1 text-sm">לחיצה לעריכה</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => startEdit(selectedYouth, 'payableHours')}
+                className="plain-card plain-card-rose p-4 text-right transition duration-200 hover:-translate-y-0.5"
+              >
+                <div className="field-label">שעות לתשלום</div>
+                <div className="text-lg font-semibold">
+                  {createHoursDraft(selectedYouthSummary).payableHours}
+                </div>
+                <div className="page-subtitle mt-1 text-sm">לחיצה לעריכה</div>
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="mb-3 text-lg font-semibold">דיווחים אחרונים</h3>
+              {selectedYouthReports.length === 0 ? (
+                <div className="empty-state py-6">
+                  <p className="page-subtitle">אין דיווחים לנער הזה.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedYouthReports.slice(0, 5).map((report) => (
+                    <div key={report.id ?? `${report.date}-${report.startTime}-${report.branch}`} className="plain-card p-4">
+                      <div className="mb-2 flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-base font-semibold">{report.branch}</div>
+                          <div className="page-subtitle text-sm">
+                            {report.date} | {report.startTime}-{report.endTime}
+                          </div>
+                        </div>
+                        <div className="chip">{reportStatusLabel[report.status]}</div>
+                      </div>
+                      <div className="text-sm text-slate-600">{report.totalHours.toFixed(1)} שעות</div>
+                      {report.details ? <div className="mt-2 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div> : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editModal ? (
+        <div className="modal-backdrop z-[60]" dir="rtl" onClick={closeEditModal}>
+          <div className="modal-panel max-w-md" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4">
+              <div className="chip chip-info mb-3">עריכת נתון</div>
+              <h2 className="section-title">{editModal.label}</h2>
+              <p className="page-subtitle mt-1">{editModal.helper}</p>
+            </div>
+
+            <input
+              value={editModal.value}
+              onChange={(event) => setEditModal((current) => (current ? { ...current, value: event.target.value } : current))}
+              className="field-input mb-4"
+              type={editModal.type}
+              step={editModal.type === 'number' ? '0.5' : undefined}
+              min={editModal.type === 'number' ? '0' : undefined}
+              autoFocus
+            />
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => void handleSaveEdit()} className="btn-olive flex-1" disabled={savingField}>
+                <FiSave size={16} />
+                {savingField ? 'שומר...' : 'אישור'}
+              </button>
+              <button type="button" onClick={closeEditModal} className="btn-sand flex-1" disabled={savingField}>
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
