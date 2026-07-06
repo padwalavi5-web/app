@@ -57,6 +57,7 @@ const normalizeYouth = (youthDoc: DocumentData | undefined, id: string): Youth =
   totalHours: Number(youthDoc?.totalHours ?? 0),
   lastResetHours: Number(youthDoc?.lastResetHours ?? 0),
   manualHoursAdjustment: Number(youthDoc?.manualHoursAdjustment ?? 0),
+  manualVolunteerAdjustment: Number(youthDoc?.manualVolunteerAdjustment ?? 0),
   budget: youthDoc?.budget === undefined ? undefined : Number(youthDoc.budget),
 });
 
@@ -138,6 +139,7 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
     totalHours: Number(youth.totalHours ?? 0),
     lastResetHours: Number(youth.lastResetHours ?? 0),
     manualHoursAdjustment: Number(youth.manualHoursAdjustment ?? 0),
+    manualVolunteerAdjustment: Number(youth.manualVolunteerAdjustment ?? 0),
   });
   return id;
 };

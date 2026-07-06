@@ -10,6 +10,7 @@ export interface Youth {
   totalHours: number;
   lastResetHours: number;
   manualHoursAdjustment?: number;
+  manualVolunteerAdjustment?: number;
   budget?: number;
 }
 

@@ -26,6 +26,7 @@ export interface YouthWorkSummary {
   payablePendingAmount: number;
   totalEarnedAmount: number;
   manualAdjustmentHours: number;
+  manualVolunteerAdjustmentHours: number;
 }
 
 // Parse a local YYYY-MM-DD string without timezone drift.
@@ -141,7 +142,11 @@ export const buildYouthWorkSummary = (
 ): YouthWorkSummary => {
   const cycleTrackedReports = getCycleTrackedReports(youth.id, reports, referenceDate);
   const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
-  const volunteerCompletedHours = getCycleVolunteerHours(youth.id, reports, referenceDate);
+  const manualVolunteerAdjustmentHours = Number(youth.manualVolunteerAdjustment ?? 0);
+  const volunteerCompletedHours = Math.max(
+    0,
+    getCycleVolunteerHours(youth.id, reports, referenceDate) + manualVolunteerAdjustmentHours,
+  );
 
   let cycleTrackedHours = 0;
   let currentMonthHours = 0;
@@ -177,5 +182,6 @@ export const buildYouthWorkSummary = (
     payablePendingAmount: payablePendingHours * hourlyRate,
     totalEarnedAmount: payableCumulativeHours * hourlyRate,
     manualAdjustmentHours,
+    manualVolunteerAdjustmentHours,
   };
 };
