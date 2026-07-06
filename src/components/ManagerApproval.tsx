@@ -133,6 +133,7 @@ const ManagerApproval = () => {
                   </div>
 
                   {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div>}
+                  {report.reviewNote ? <div className="mb-4 rounded-3xl bg-amber-50/90 p-3 text-sm text-amber-800">{report.reviewNote}</div> : null}
 
                   <div className="flex gap-2">
                     <button type="button" onClick={() => void handleApprove(report.id)} className="btn-primary flex-1">

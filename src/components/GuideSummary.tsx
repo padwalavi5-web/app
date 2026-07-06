@@ -12,6 +12,8 @@ const reportStatusLabel: Record<Report['status'], string> = {
   paid: 'שולם',
 };
 
+const GUIDE_REVIEW_NOTE = 'אושר על ידי המדריך';
+
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -97,13 +99,12 @@ const GuideSummary = () => {
     const csvContent =
       '\uFEFF' +
       [
-        ['שם', 'מספר תקציב', 'שעות החודש', 'התנדבות', 'לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
+        ['שם', 'מספר תקציב', 'שעות החודש', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
         ...summaryRows.map((row) =>
           [
             row.youth.name,
             row.youth.personalBudgetNumber,
             row.summary.currentMonthHours.toFixed(1),
-            row.summary.volunteerCompletedHours.toFixed(1),
             row.summary.payablePendingHours.toFixed(1),
             row.summary.payablePendingAmount.toFixed(2),
           ].map(escapeValue).join(','),
@@ -167,7 +168,7 @@ const GuideSummary = () => {
     }
 
     try {
-      await updateReport(reportId, { status: 'approved', reviewNote: '' });
+      await updateReport(reportId, { status: 'approved', reviewNote: GUIDE_REVIEW_NOTE });
       await fetchData();
     } catch (error) {
       console.error(error);
@@ -321,7 +322,7 @@ const GuideSummary = () => {
 
                     <div className="mb-3 text-sm text-slate-600">סה"כ {report.totalHours.toFixed(1)} שעות</div>
                     {report.details ? <div className="mb-3 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div> : null}
-                    {report.reviewNote ? <div className="mb-3 rounded-3xl bg-rose-50/90 p-3 text-sm text-rose-700">{report.reviewNote}</div> : null}
+                    {report.reviewNote ? <div className="mb-3 rounded-3xl bg-amber-50/90 p-3 text-sm text-amber-800">{report.reviewNote}</div> : null}
 
                     {report.status === 'pending' && report.approvalTarget === 'guide' ? (
                       <div className="flex gap-2">
