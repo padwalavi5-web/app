@@ -1,7 +1,8 @@
-import type { HourlyRate, Report, Youth } from './types';
+import { VOLUNTEER_BRANCH_NAME, type HourlyRate, type Report, type Youth } from './types';
 import { calculateAge } from './data';
 
 export const MANDATORY_HOURS_LIMIT = 90;
+export const VOLUNTEER_HOURS_LIMIT = 20;
 
 export interface EditableYouthHours {
   mandatoryHours: number;
@@ -17,6 +18,7 @@ export interface YouthHoursUpdate {
 export interface YouthWorkSummary {
   cycleApprovedHours: number;
   mandatoryCompletedHours: number;
+  volunteerCompletedHours: number;
   payableCumulativeHours: number;
   payablePendingHours: number;
   currentMonthHours: number;
@@ -31,6 +33,10 @@ const parseLocalDate = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 };
+
+// Identify volunteer reports so they can be approved and counted separately from work hours.
+export const isVolunteerReport = (report: Report) =>
+  report.reportType === 'volunteer' || report.branch === VOLUNTEER_BRANCH_NAME;
 
 // Return the beginning of the current work cycle, which always starts on July 1st.
 export const getWorkCycleStart = (referenceDate = new Date()) => {
@@ -70,10 +76,27 @@ const getCycleTrackedReports = (youthId: string, reports: Report[], referenceDat
     reports.filter(
       (report) =>
         report.youthId === youthId &&
+        !isVolunteerReport(report) &&
         (report.status === 'approved' || report.status === 'paid') &&
         isReportInCurrentCycle(report.date, referenceDate),
     ),
   );
+
+// Return all approved volunteer reports from the current work cycle for one youth.
+const getCycleVolunteerReports = (youthId: string, reports: Report[], referenceDate: Date) =>
+  sortReportsByDate(
+    reports.filter(
+      (report) =>
+        report.youthId === youthId &&
+        isVolunteerReport(report) &&
+        (report.status === 'approved' || report.status === 'paid') &&
+        isReportInCurrentCycle(report.date, referenceDate),
+    ),
+  );
+
+// Sum approved volunteer hours inside the current July-to-June work cycle.
+export const getCycleVolunteerHours = (youthId: string, reports: Report[], referenceDate = new Date()) =>
+  getCycleVolunteerReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
 
 // Sum tracked report hours inside the current work cycle.
 const getCycleTrackedHours = (youthId: string, reports: Report[], referenceDate: Date) =>
@@ -118,6 +141,7 @@ export const buildYouthWorkSummary = (
 ): YouthWorkSummary => {
   const cycleTrackedReports = getCycleTrackedReports(youth.id, reports, referenceDate);
   const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
+  const volunteerCompletedHours = getCycleVolunteerHours(youth.id, reports, referenceDate);
 
   let cycleTrackedHours = 0;
   let currentMonthHours = 0;
@@ -145,6 +169,7 @@ export const buildYouthWorkSummary = (
   return {
     cycleApprovedHours: effectiveCycleHours,
     mandatoryCompletedHours: Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours),
+    volunteerCompletedHours,
     payableCumulativeHours,
     payablePendingHours,
     currentMonthHours,

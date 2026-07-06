@@ -3,13 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiLogOut, FiSend, FiTrendingUp } from 'react-icons/fi';
 import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
 import CircularProgress from './CircularProgress';
-import type { Branch, CurrentUser, HourlyRate, Report, Youth } from '../types';
-import { buildYouthWorkSummary, MANDATORY_HOURS_LIMIT } from '../workSummary';
+import { VOLUNTEER_BRANCH_NAME, type Branch, type CurrentUser, type HourlyRate, type Report, type Youth } from '../types';
+import {
+  buildYouthWorkSummary,
+  isReportInCurrentCycle,
+  MANDATORY_HOURS_LIMIT,
+  VOLUNTEER_HOURS_LIMIT,
+} from '../workSummary';
 
 const OTHER_BRANCH_NAME = 'אחר';
 
 // מחזירה את תאריך היום בפורמט שמתאים לשדה date בטופס.
 const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+// בודקת אם הדיווח צריך פירוט ואישור מדריך במקום אישור ענף רגיל.
+const isGuideReviewedBranch = (branchName: string) =>
+  branchName === OTHER_BRANCH_NAME || branchName === VOLUNTEER_BRANCH_NAME;
+
+// מחשבת את אחוז ההתקדמות של שעות ההתנדבות מתוך היעד השנתי.
+const getVolunteerProgressPercent = (completedHours: number) =>
+  Math.min(100, Math.max(0, (completedHours / VOLUNTEER_HOURS_LIMIT) * 100));
 
 const statusLabels: Record<Report['status'], string> = {
   pending: 'ממתין',
@@ -98,13 +111,24 @@ const YouthDashboard = () => {
 
   const branchOptions = useMemo(() => {
     const existingNames = new Set(branches.map((branch) => branch.name));
-    return existingNames.has(OTHER_BRANCH_NAME) ? branches : [...branches, { name: OTHER_BRANCH_NAME, password: '' }];
+    const options = [...branches];
+
+    if (!existingNames.has(OTHER_BRANCH_NAME)) {
+      options.push({ name: OTHER_BRANCH_NAME, password: '' });
+    }
+
+    if (!existingNames.has(VOLUNTEER_BRANCH_NAME)) {
+      options.push({ name: VOLUNTEER_BRANCH_NAME, password: '' });
+    }
+
+    return options;
   }, [branches]);
 
   const userReports = useMemo(
     () =>
       reports
         .filter((item) => item.youthId === (youthUser?.id ?? ''))
+        .filter((item) => isReportInCurrentCycle(item.date))
         .slice()
         .sort((left, right) => `${right.date}T${right.startTime}`.localeCompare(`${left.date}T${left.startTime}`)),
     [reports, youthUser?.id],
@@ -125,9 +149,9 @@ const YouthDashboard = () => {
       return;
     }
 
-    const isOtherBranch = report.branch === OTHER_BRANCH_NAME;
-    if (isOtherBranch && !report.details.trim()) {
-      alert('צריך להוסיף פירוט עבודה.');
+    const requiresGuideReview = isGuideReviewedBranch(report.branch);
+    if (requiresGuideReview && !report.details.trim()) {
+      alert('צריך להוסיף פירוט.');
       return;
     }
 
@@ -146,12 +170,13 @@ const YouthDashboard = () => {
         youthId: youthUser.id,
         youthName: youthUser.name,
         branch: report.branch,
-        details: isOtherBranch ? report.details.trim() : '',
+        reportType: report.branch === VOLUNTEER_BRANCH_NAME ? 'volunteer' : 'work',
+        details: requiresGuideReview ? report.details.trim() : '',
         date: report.date,
         startTime: report.startTime,
         endTime: report.endTime,
         totalHours,
-        approvalTarget: isOtherBranch ? 'guide' : 'manager',
+        approvalTarget: requiresGuideReview ? 'guide' : 'manager',
         status: 'pending',
       });
 
@@ -223,6 +248,20 @@ const YouthDashboard = () => {
               </div>
 
               <div className="metric-grid compact-grid">
+                <div className="stat-card stat-card-sky compact-card sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span className="page-subtitle">התנדבות</span>
+                    <span className="font-semibold text-slate-700">
+                      {summary.volunteerCompletedHours.toFixed(1)} / {VOLUNTEER_HOURS_LIMIT}
+                    </span>
+                  </div>
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-[#2563eb] transition-all duration-500"
+                      style={{ width: `${getVolunteerProgressPercent(summary.volunteerCompletedHours)}%` }}
+                    />
+                  </div>
+                </div>
                 <div className="stat-card stat-card-sky compact-card">
                   <div className="flex items-center justify-between">
                     <span className="page-subtitle">החודש</span>
@@ -302,7 +341,7 @@ const YouthDashboard = () => {
                     setReport((current) => ({
                       ...current,
                       branch: event.target.value,
-                      details: event.target.value === OTHER_BRANCH_NAME ? current.details : '',
+                      details: isGuideReviewedBranch(event.target.value) ? current.details : '',
                     }))
                   }
                 >
@@ -350,7 +389,7 @@ const YouthDashboard = () => {
                 </div>
               </div>
 
-              {report.branch === OTHER_BRANCH_NAME && (
+              {isGuideReviewedBranch(report.branch) && (
                 <div>
                   <label htmlFor="details" className="field-label">פירוט</label>
                   <textarea

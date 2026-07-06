@@ -21,6 +21,7 @@ import type {
   Report,
   Youth,
 } from './types';
+import { VOLUNTEER_BRANCH_NAME } from './types';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
@@ -64,6 +65,7 @@ const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Repor
   youthId: String(reportDoc?.youthId ?? ''),
   youthName: String(reportDoc?.youthName ?? ''),
   branch: String(reportDoc?.branch ?? ''),
+  reportType: reportDoc?.reportType === 'volunteer' || reportDoc?.branch === VOLUNTEER_BRANCH_NAME ? 'volunteer' : 'work',
   details: String(reportDoc?.details ?? ''),
   date: String(reportDoc?.date ?? ''),
   startTime: String(reportDoc?.startTime ?? ''),

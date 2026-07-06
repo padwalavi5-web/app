@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
 import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout, updateReport } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
-import { buildYouthWorkSummary } from '../workSummary';
+import { buildYouthWorkSummary, isReportInCurrentCycle } from '../workSummary';
 
 const reportStatusLabel: Record<Report['status'], string> = {
   pending: 'ממתין',
@@ -84,6 +84,7 @@ const GuideSummary = () => {
       selectedYouth
         ? reports
             .filter((report) => report.youthId === selectedYouth.id)
+            .filter((report) => isReportInCurrentCycle(report.date))
             .slice()
             .sort((left, right) => `${right.date}T${right.startTime}`.localeCompare(`${left.date}T${left.startTime}`))
         : [],
@@ -96,12 +97,13 @@ const GuideSummary = () => {
     const csvContent =
       '\uFEFF' +
       [
-        ['שם', 'מספר תקציב', 'שעות החודש', 'לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
+        ['שם', 'מספר תקציב', 'שעות החודש', 'התנדבות', 'לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
         ...summaryRows.map((row) =>
           [
             row.youth.name,
             row.youth.personalBudgetNumber,
             row.summary.currentMonthHours.toFixed(1),
+            row.summary.volunteerCompletedHours.toFixed(1),
             row.summary.payablePendingHours.toFixed(1),
             row.summary.payablePendingAmount.toFixed(2),
           ].map(escapeValue).join(','),
@@ -250,6 +252,7 @@ const GuideSummary = () => {
                     <th>שם</th>
                     <th>תקציב</th>
                     <th>החודש</th>
+                    <th>התנדבות</th>
                     <th>לתשלום</th>
                     <th>סכום</th>
                   </tr>
@@ -274,6 +277,7 @@ const GuideSummary = () => {
                         </td>
                         <td>{row.youth.personalBudgetNumber}</td>
                         <td>{row.summary.currentMonthHours.toFixed(1)}</td>
+                        <td>{row.summary.volunteerCompletedHours.toFixed(1)}</td>
                         <td>{row.summary.payablePendingHours.toFixed(1)}</td>
                         <td className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</td>
                       </tr>

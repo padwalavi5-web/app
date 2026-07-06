@@ -1,5 +1,7 @@
 ﻿export type Role = 'youth' | 'manager' | 'guide';
 
+export const VOLUNTEER_BRANCH_NAME = 'התנדבות';
+
 export interface Youth {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface Report {
   youthId: string;
   youthName: string;
   branch: string;
+  reportType?: 'work' | 'volunteer';
   details?: string;
   date: string;
   startTime: string;
