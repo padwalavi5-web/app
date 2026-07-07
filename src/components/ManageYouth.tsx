@@ -478,7 +478,7 @@ const ManageYouth = () => {
                         className="btn-olive flex-1"
                       >
                         <FiCheck size={16} />
-                        אשר
+                        הוסף אישור מדריך
                       </button>
                       <button
                         type="button"

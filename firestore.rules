@@ -1,0 +1,138 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // These rules assume Firebase Auth with custom claims:
+    // role: youth | manager | guide
+    // branch: manager branch name
+    // youthId: the authenticated youth document id
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return signedIn() ? request.auth.token.role : null;
+    }
+
+    function isGuide() {
+      return role() == 'guide';
+    }
+
+    function isManager() {
+      return role() == 'manager';
+    }
+
+    function isYouth() {
+      return role() == 'youth';
+    }
+
+    function youthId() {
+      return signedIn() ? request.auth.token.youthId : null;
+    }
+
+    function managerBranch() {
+      return signedIn() ? request.auth.token.branch : null;
+    }
+
+    function isOwnYouthDoc(docId) {
+      return isYouth() && youthId() == docId;
+    }
+
+    function isManagerBranchReport(report) {
+      return isManager() && report.data.branch == managerBranch();
+    }
+
+    function validReportStatus(value) {
+      return value in ['pending', 'approved', 'rejected', 'paid'];
+    }
+
+    function validApprovalTarget(value) {
+      return value in ['manager', 'guide'];
+    }
+
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if isGuide();
+    }
+
+    match /rates/{rateId} {
+      allow read: if true;
+      allow write: if isGuide();
+    }
+
+    match /config/guideSettings {
+      allow read: if true;
+      allow write: if isGuide();
+    }
+
+    match /youth/{youthId} {
+      allow read: if isGuide() || isOwnYouthDoc(youthId);
+      allow create: if isGuide() || isOwnYouthDoc(youthId);
+      allow update: if isGuide() || isOwnYouthDoc(youthId);
+      allow delete: if isGuide();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isGuide()
+        || (isManager() && isManagerBranchReport(resource))
+        || (isYouth() && resource.data.youthId == youthId());
+
+      allow create: if isYouth()
+        && request.resource.data.youthId == youthId()
+        && request.resource.data.status == 'pending'
+        && validReportStatus(request.resource.data.status)
+        && validApprovalTarget(request.resource.data.approvalTarget);
+
+      allow update: if (isGuide() && canGuideUpdate())
+        || (isManager() && canManagerUpdate())
+        || (isYouth() && resource.data.youthId == youthId() && canYouthUpdate());
+
+      allow delete: if isGuide();
+    }
+
+    function canYouthUpdate() {
+      return request.resource.data.youthId == resource.data.youthId
+        && request.resource.data.youthName == resource.data.youthName
+        && request.resource.data.branch == resource.data.branch
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.startTime == resource.data.startTime
+        && request.resource.data.endTime == resource.data.endTime
+        && request.resource.data.totalHours == resource.data.totalHours
+        && request.resource.data.approvalTarget == resource.data.approvalTarget
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.reviewNote == resource.data.reviewNote;
+    }
+
+    function canManagerUpdate() {
+      return resource.data.approvalTarget == 'manager'
+        && resource.data.branch == managerBranch()
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.youthId == resource.data.youthId
+        && request.resource.data.youthName == resource.data.youthName
+        && request.resource.data.branch == resource.data.branch
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.startTime == resource.data.startTime
+        && request.resource.data.endTime == resource.data.endTime
+        && request.resource.data.totalHours == resource.data.totalHours
+        && request.resource.data.approvalTarget == resource.data.approvalTarget
+        && request.resource.data.reviewNote is string;
+    }
+
+    function canGuideUpdate() {
+      return request.resource.data.youthId == resource.data.youthId
+        && request.resource.data.youthName == resource.data.youthName
+        && request.resource.data.branch == resource.data.branch
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.startTime == resource.data.startTime
+        && request.resource.data.endTime == resource.data.endTime
+        && request.resource.data.totalHours == resource.data.totalHours
+        && request.resource.data.approvalTarget == resource.data.approvalTarget
+        && request.resource.data.reviewNote is string
+        && (
+          (resource.data.approvalTarget == 'guide' && request.resource.data.status in ['approved', 'rejected'])
+          || (resource.data.approvalTarget == 'manager' && request.resource.data.status in ['pending', 'rejected'])
+        );
+    }
+  }
+}
