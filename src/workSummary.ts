@@ -4,6 +4,8 @@ import { calculateAge } from './data';
 export const MANDATORY_HOURS_LIMIT = 90;
 export const VOLUNTEER_HOURS_LIMIT = 20;
 
+export type ApprovalCoverage = 'mandatory' | 'payable' | 'both';
+
 export interface EditableYouthHours {
   mandatoryHours: number;
   payableHours: number;
@@ -27,6 +29,23 @@ export interface YouthWorkSummary {
   totalEarnedAmount: number;
   manualAdjustmentHours: number;
   manualVolunteerAdjustmentHours: number;
+}
+
+export interface ReportWorkContribution {
+  reportId: string;
+  branch: string;
+  chargeCommittee: string;
+  naturalMandatoryHours: number;
+  naturalPayableHours: number;
+  countedMandatoryHours: number;
+  countedPayableHours: number;
+}
+
+export interface PayableBranchTotalsEntry {
+  branch: string;
+  chargeCommittee: string;
+  payableHours: number;
+  payableAmount: number;
 }
 
 // Parse a local YYYY-MM-DD string without timezone drift.
@@ -63,6 +82,28 @@ const getYouthRate = (youth: Youth, rates: HourlyRate[]) => {
   const age = calculateAge(youth.birthDate);
   const matchedRate = rates.find((rate) => rate.age === age);
   return matchedRate?.rate ?? 0;
+};
+
+const getApprovalCoverage = (report: Report): ApprovalCoverage => {
+  if (
+    report.approvalCoverage === 'mandatory' ||
+    report.approvalCoverage === 'payable' ||
+    report.approvalCoverage === 'both'
+  ) {
+    return report.approvalCoverage;
+  }
+
+  return 'both';
+};
+
+const getNaturalSplit = (cumulativeHours: number, totalHours: number) => {
+  const mandatoryHours = Math.max(0, Math.min(MANDATORY_HOURS_LIMIT - cumulativeHours, totalHours));
+  const payableHours = Math.max(0, totalHours - mandatoryHours);
+
+  return {
+    mandatoryHours,
+    payableHours,
+  };
 };
 
 // Sort reports so cumulative hour calculations stay deterministic.
@@ -103,6 +144,34 @@ export const getCycleVolunteerHours = (youthId: string, reports: Report[], refer
 const getCycleTrackedHours = (youthId: string, reports: Report[], referenceDate: Date) =>
   getCycleTrackedReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
 
+const getCycleWorkContributions = (youth: Youth, reports: Report[], referenceDate: Date) => {
+  const workReports = getCycleTrackedReports(youth.id, reports, referenceDate);
+  const contributions: ReportWorkContribution[] = [];
+  let cumulativeHours = Math.max(0, Number(youth.manualHoursAdjustment ?? 0));
+
+  for (const report of workReports) {
+    const split = getNaturalSplit(cumulativeHours, report.totalHours);
+    const coverage = getApprovalCoverage(report);
+    const countedMandatoryHours =
+      coverage === 'mandatory' || coverage === 'both' ? split.mandatoryHours : 0;
+    const countedPayableHours = coverage === 'payable' || coverage === 'both' ? split.payableHours : 0;
+
+    contributions.push({
+      reportId: report.id ?? `${report.date}-${report.startTime}-${report.branch}`,
+      branch: report.branch,
+      chargeCommittee: String(report.chargeCommittee ?? '').trim(),
+      naturalMandatoryHours: split.mandatoryHours,
+      naturalPayableHours: split.payableHours,
+      countedMandatoryHours,
+      countedPayableHours,
+    });
+
+    cumulativeHours += countedMandatoryHours + countedPayableHours;
+  }
+
+  return contributions;
+};
+
 // Normalize guide-edited hours so mandatory hours fill first up to 90 and only the remainder becomes payable.
 export const normalizeEditableHours = (mandatoryHours: number, payableHours: number): EditableYouthHours => {
   const totalVisibleHours = toNonNegativeNumber(mandatoryHours) + toNonNegativeNumber(payableHours);
@@ -133,6 +202,71 @@ export const buildYouthHoursUpdate = (
   };
 };
 
+export const getReportWorkPreview = (
+  youth: Youth,
+  reports: Report[],
+  report: Report,
+  referenceDate = new Date(),
+) => {
+  const workReports = getCycleTrackedReports(youth.id, reports, referenceDate);
+  const targetIndex = workReports.findIndex((item) => item.id === report.id);
+  const relevantReports = targetIndex >= 0 ? workReports.slice(0, targetIndex) : workReports;
+  let cumulativeHours = Math.max(0, Number(youth.manualHoursAdjustment ?? 0));
+
+  for (const currentReport of relevantReports) {
+    const split = getNaturalSplit(cumulativeHours, currentReport.totalHours);
+    const coverage = getApprovalCoverage(currentReport);
+    const countedMandatoryHours =
+      coverage === 'mandatory' || coverage === 'both' ? split.mandatoryHours : 0;
+    const countedPayableHours = coverage === 'payable' || coverage === 'both' ? split.payableHours : 0;
+    cumulativeHours += countedMandatoryHours + countedPayableHours;
+  }
+
+  const split = getNaturalSplit(cumulativeHours, report.totalHours);
+
+  return split;
+};
+
+export const buildPayableBranchTotals = (
+  youth: Youth,
+  reports: Report[],
+  rates: HourlyRate[],
+  referenceDate = new Date(),
+): PayableBranchTotalsEntry[] => {
+  const contributions = getCycleWorkContributions(youth, reports, referenceDate);
+  const rate = getYouthRate(youth, rates);
+  const totals = new Map<string, PayableBranchTotalsEntry>();
+
+  contributions.forEach((contribution) => {
+    const branchLabel =
+      contribution.branch === 'אחר' && contribution.chargeCommittee
+        ? `${contribution.branch} (${contribution.chargeCommittee})`
+        : contribution.branch;
+    const existing = totals.get(branchLabel);
+    const payableHours = contribution.countedPayableHours;
+    const payableAmount = payableHours * rate;
+
+    if (existing) {
+      existing.payableHours += payableHours;
+      existing.payableAmount += payableAmount;
+      return;
+    }
+
+    totals.set(branchLabel, {
+      branch: contribution.branch,
+      chargeCommittee: contribution.chargeCommittee,
+      payableHours,
+      payableAmount,
+    });
+  });
+
+  return [...totals.values()].sort((left, right) => {
+    const leftLabel = `${left.branch} ${left.chargeCommittee}`;
+    const rightLabel = `${right.branch} ${right.chargeCommittee}`;
+    return leftLabel.localeCompare(rightLabel, 'he');
+  });
+};
+
 // Build the guide/youth summary while keeping July 1st as the only reset point for mandatory hours.
 export const buildYouthWorkSummary = (
   youth: Youth,
@@ -140,7 +274,6 @@ export const buildYouthWorkSummary = (
   rates: HourlyRate[],
   referenceDate = new Date(),
 ): YouthWorkSummary => {
-  const cycleTrackedReports = getCycleTrackedReports(youth.id, reports, referenceDate);
   const manualAdjustmentHours = Number(youth.manualHoursAdjustment ?? 0);
   const manualVolunteerAdjustmentHours = Number(youth.manualVolunteerAdjustment ?? 0);
   const volunteerCompletedHours = Math.max(
@@ -148,32 +281,36 @@ export const buildYouthWorkSummary = (
     getCycleVolunteerHours(youth.id, reports, referenceDate) + manualVolunteerAdjustmentHours,
   );
 
-  let cycleTrackedHours = 0;
+  const cycleWorkContributions = getCycleWorkContributions(youth, reports, referenceDate);
+  const initialCycleHours = Math.max(0, manualAdjustmentHours);
+  let cycleApprovedHours = initialCycleHours;
+  let mandatoryCompletedHours = Math.min(MANDATORY_HOURS_LIMIT, initialCycleHours);
+  let payableCumulativeHours = Math.max(0, initialCycleHours - MANDATORY_HOURS_LIMIT);
   let currentMonthHours = 0;
   let currentMonthPayableHours = 0;
-  let cumulativeCycleHours = manualAdjustmentHours;
+  let cumulativeCycleHours = initialCycleHours;
 
-  for (const report of cycleTrackedReports) {
-    const payableBeforeReport = Math.max(0, cumulativeCycleHours - MANDATORY_HOURS_LIMIT);
-    cumulativeCycleHours += report.totalHours;
-    const payableAfterReport = Math.max(0, cumulativeCycleHours - MANDATORY_HOURS_LIMIT);
+  for (const contribution of cycleWorkContributions) {
+    const report = reports.find((item) => item.id === contribution.reportId);
+    const countedHours = contribution.countedMandatoryHours + contribution.countedPayableHours;
 
-    cycleTrackedHours += report.totalHours;
+    cycleApprovedHours += countedHours;
+    mandatoryCompletedHours += contribution.countedMandatoryHours;
+    payableCumulativeHours += contribution.countedPayableHours;
+    cumulativeCycleHours += countedHours;
 
-    if (isSameMonth(report.date, referenceDate)) {
-      currentMonthHours += report.totalHours;
-      currentMonthPayableHours += payableAfterReport - payableBeforeReport;
+    if (report && isSameMonth(report.date, referenceDate)) {
+      currentMonthHours += countedHours;
+      currentMonthPayableHours += contribution.countedPayableHours;
     }
   }
 
-  const effectiveCycleHours = Math.max(0, cycleTrackedHours + manualAdjustmentHours);
-  const payableCumulativeHours = Math.max(0, effectiveCycleHours - MANDATORY_HOURS_LIMIT);
   const payablePendingHours = Math.max(0, payableCumulativeHours - toNonNegativeNumber(Number(youth.lastResetHours ?? 0)));
   const hourlyRate = getYouthRate(youth, rates);
 
   return {
-    cycleApprovedHours: effectiveCycleHours,
-    mandatoryCompletedHours: Math.min(MANDATORY_HOURS_LIMIT, effectiveCycleHours),
+    cycleApprovedHours,
+    mandatoryCompletedHours,
     volunteerCompletedHours,
     payableCumulativeHours,
     payablePendingHours,

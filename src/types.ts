@@ -20,6 +20,8 @@ export interface Report {
   youthName: string;
   branch: string;
   reportType?: 'work' | 'volunteer';
+  approvalCoverage?: 'mandatory' | 'payable' | 'both';
+  chargeCommittee?: string;
   details?: string;
   date: string;
   startTime: string;

@@ -67,6 +67,15 @@ const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Repor
   youthName: String(reportDoc?.youthName ?? ''),
   branch: String(reportDoc?.branch ?? ''),
   reportType: reportDoc?.reportType === 'volunteer' || reportDoc?.branch === VOLUNTEER_BRANCH_NAME ? 'volunteer' : 'work',
+  approvalCoverage:
+    reportDoc?.approvalCoverage === 'mandatory' ||
+    reportDoc?.approvalCoverage === 'payable' ||
+    reportDoc?.approvalCoverage === 'both'
+      ? reportDoc.approvalCoverage
+      : reportDoc?.status === 'approved' || reportDoc?.status === 'paid'
+        ? 'both'
+        : undefined,
+  chargeCommittee: String(reportDoc?.chargeCommittee ?? ''),
   details: String(reportDoc?.details ?? ''),
   date: String(reportDoc?.date ?? ''),
   startTime: String(reportDoc?.startTime ?? ''),

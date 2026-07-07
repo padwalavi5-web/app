@@ -1,10 +1,37 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
-import { getCurrentUser, getReports, logout, updateReport } from '../data';
-import type { CurrentUser, Report } from '../types';
+import { getCurrentUser, getReports, getYouth, logout, updateReport } from '../data';
+import type { CurrentUser, Report, Youth } from '../types';
+import { getReportWorkPreview, type ApprovalCoverage } from '../workSummary';
+
+const reportStatusLabel: Record<Report['status'], string> = {
+  pending: 'ממתין',
+  approved: 'אושר',
+  rejected: 'נדחה',
+  paid: 'שולם',
+};
+
+const approvalCoverageLabel: Record<ApprovalCoverage, string> = {
+  mandatory: 'חובה',
+  payable: 'בתשלום',
+  both: 'חובה + בתשלום',
+};
+
+const approvalCoverageActionLabel: Record<ApprovalCoverage, string> = {
+  mandatory: 'אשר חובה',
+  payable: 'אשר בתשלום',
+  both: 'אשר שניהם',
+};
+
+const approvalCoverageNote: Record<ApprovalCoverage, string> = {
+  mandatory: 'אושר חובה בלבד',
+  payable: 'אושר בתשלום בלבד',
+  both: '',
+};
 
 const ManagerApproval = () => {
+  const [youthList, setYouthList] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -22,14 +49,9 @@ const ManagerApproval = () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const allReports = await getReports();
-      const pendingReports = allReports.filter(
-        (report) =>
-          report.status === 'pending' &&
-          (report.approvalTarget ?? 'manager') === 'manager' &&
-          report.branch === managerUser.branch,
-      );
-      setReports(pendingReports);
+      const [youthData, allReports] = await Promise.all([getYouth(), getReports()]);
+      setYouthList(youthData);
+      setReports(allReports);
     } catch (error) {
       console.error(error);
       setLoadError('טעינת הדיווחים נכשלה');
@@ -47,16 +69,46 @@ const ManagerApproval = () => {
     void loadReports();
   }, [loadReports, managerUser, navigate]);
 
-  const handleApprove = async (reportId?: string) => {
+  const pendingReports = useMemo(
+    () =>
+      reports.filter(
+        (report) =>
+          report.status === 'pending' &&
+          (report.approvalTarget ?? 'manager') === 'manager' &&
+          report.branch === managerUser?.branch,
+      ),
+    [managerUser?.branch, reports],
+  );
+
+  const youthById = useMemo(() => new Map(youthList.map((item) => [item.id, item])), [youthList]);
+
+  const reportPreviewById = useMemo(
+    () =>
+      new Map(
+        pendingReports.map((report) => {
+          const youth = youthById.get(report.youthId);
+          const preview = youth ? getReportWorkPreview(youth, reports, report) : { mandatoryHours: 0, payableHours: 0 };
+          return [report.id ?? `${report.date}-${report.startTime}-${report.branch}`, preview] as const;
+        }),
+      ),
+    [pendingReports, reports, youthById],
+  );
+
+  const handleApprove = async (reportId?: string, coverage: ApprovalCoverage = 'both') => {
     if (!reportId) {
       return;
     }
 
     try {
-      await updateReport(reportId, { status: 'approved', reviewNote: '' });
-      setReports((current) => current.filter((report) => report.id !== reportId));
+      await updateReport(reportId, {
+        status: 'approved',
+        approvalCoverage: coverage,
+        reviewNote: approvalCoverageNote[coverage],
+      });
+      await loadReports();
     } catch (error) {
       console.error(error);
+      alert('אישור הדיווח נכשל.');
     }
   };
 
@@ -67,11 +119,12 @@ const ManagerApproval = () => {
 
     try {
       await updateReport(selectedReport.id, { status: 'rejected', reviewNote: rejectNote.trim() });
-      setReports((current) => current.filter((report) => report.id !== selectedReport.id));
       setSelectedReport(null);
       setRejectNote('');
+      await loadReports();
     } catch (error) {
       console.error(error);
+      alert('דחיית הדיווח נכשלה.');
     }
   };
 
@@ -80,7 +133,7 @@ const ManagerApproval = () => {
   }
 
   if (isLoading) {
-    return <div className="app-shell flex items-center justify-center text-center">טוען...</div>;
+    return <div className="app-shell flex items-center justify-center text-center" dir="rtl">טוען...</div>;
   }
 
   return (
@@ -93,14 +146,15 @@ const ManagerApproval = () => {
               <h1 className="page-title">אישורים</h1>
             </div>
             <div className="toolbar">
-              <div className="chip chip-warm">{reports.length}</div>
+              <div className="chip chip-warm">{pendingReports.length}</div>
               <button
                 type="button"
                 onClick={() => {
                   logout();
                   navigate('/');
                 }}
-                className="btn-secondary"
+                className="btn-rose"
+                aria-label="התנתקות"
               >
                 <FiLogOut size={18} />
               </button>
@@ -110,50 +164,87 @@ const ManagerApproval = () => {
           {loadError ? (
             <div className="mb-4 flex items-center justify-between gap-3 rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               <span>{loadError}</span>
-              <button type="button" onClick={() => void loadReports()} className="btn-secondary px-3 py-2">
+              <button type="button" onClick={() => void loadReports()} className="btn-sky px-3 py-2">
                 נסה שוב
               </button>
             </div>
           ) : null}
 
           <div className="grid gap-3 md:grid-cols-2">
-            {reports.length === 0 ? (
+            {pendingReports.length === 0 ? (
               <div className="empty-state py-6">
                 <p className="page-subtitle">אין דיווחים</p>
               </div>
             ) : (
-              reports.map((report) => (
-                <div key={report.id} className="content-card p-4">
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-base font-semibold">{report.youthName}</div>
-                      <div className="page-subtitle text-sm">{report.date} | {report.startTime}-{report.endTime}</div>
-                    </div>
-                    <div className="chip chip-warm">{report.totalHours.toFixed(1)}</div>
-                  </div>
+              pendingReports.map((report) => {
+                const preview = reportPreviewById.get(report.id ?? '') ?? { mandatoryHours: 0, payableHours: 0 };
+                const isBoth = preview.mandatoryHours > 0 && preview.payableHours > 0;
+                const isMandatoryOnly = preview.mandatoryHours > 0 && preview.payableHours === 0;
+                const coverageLabel: ApprovalCoverage = isBoth
+                  ? 'both'
+                  : isMandatoryOnly
+                    ? 'mandatory'
+                    : 'payable';
 
-                  {report.details && <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div>}
-                  {report.reviewNote ? (
-                    <div className="mb-4 rounded-3xl bg-amber-50/90 p-3 text-sm text-amber-800">
-                      <div className="mb-2">{report.reviewNote}</div>
-                      <button type="button" onClick={() => void handleApprove(report.id)} className="btn-olive w-full">
-                        אשר מהודעת המדריך
-                      </button>
+                return (
+                  <div key={report.id} className="content-card p-4">
+                    <div className="mb-3 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-base font-semibold">{report.youthName}</div>
+                        <div className="page-subtitle text-sm">
+                          {report.date} | {report.startTime}-{report.endTime}
+                        </div>
+                      </div>
+                      <div className="chip chip-warm">{report.totalHours.toFixed(1)}</div>
                     </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => void handleApprove(report.id)} className="btn-primary flex-1">
-                        <FiCheck size={16} />
-                        אשר
-                      </button>
-                      <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger flex-1">
-                        <FiX size={16} />
-                        דחה
-                      </button>
+
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      <div className="chip">{approvalCoverageLabel[coverageLabel]}</div>
+                      <div className="chip chip-info">שעות חובה: {preview.mandatoryHours.toFixed(1)}</div>
+                      <div className="chip chip-info">שעות בתשלום: {preview.payableHours.toFixed(1)}</div>
                     </div>
-                  )}
-                </div>
-              ))
+
+                    {report.details ? <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div> : null}
+                    {report.reviewNote ? (
+                      <div className="mb-4 rounded-3xl bg-amber-50/90 p-3 text-sm text-amber-800">
+                        <div>{report.reviewNote}</div>
+                      </div>
+                    ) : null}
+
+                    {isBoth ? (
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <button type="button" onClick={() => void handleApprove(report.id, 'both')} className="btn-primary">
+                          <FiCheck size={16} />
+                          {approvalCoverageActionLabel.both}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleApprove(report.id, 'mandatory')}
+                          className="btn-olive"
+                        >
+                          <FiCheck size={16} />
+                          {approvalCoverageActionLabel.mandatory}
+                        </button>
+                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger">
+                          <FiX size={16} />
+                          לא לאשר
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <button type="button" onClick={() => void handleApprove(report.id, coverageLabel)} className="btn-primary">
+                          <FiCheck size={16} />
+                          {approvalCoverageActionLabel[coverageLabel]}
+                        </button>
+                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger">
+                          <FiX size={16} />
+                          לא לאשר
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </section>
@@ -176,7 +267,7 @@ const ManagerApproval = () => {
               <button type="button" onClick={handleReject} className="btn-danger flex-1">
                 שלח
               </button>
-              <button type="button" onClick={() => setSelectedReport(null)} className="btn-secondary flex-1">
+              <button type="button" onClick={() => setSelectedReport(null)} className="btn-sand flex-1">
                 ביטול
               </button>
             </div>
