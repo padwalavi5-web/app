@@ -15,6 +15,7 @@ const roleButtonClass: Record<Role, string> = {
   guide: 'segmented-sand',
 };
 
+// Renders the login and registration screen for all user roles.
 const Login = () => {
   const [role, setRole] = useState<Role>('youth');
   const [youthMode, setYouthMode] = useState<'login' | 'register'>('login');
@@ -37,6 +38,7 @@ const Login = () => {
       });
   }, []);
 
+  // Validates credentials and routes the user to the correct dashboard.
   const handleLogin = async () => {
     setIsSubmitting(true);
 

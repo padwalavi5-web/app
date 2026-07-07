@@ -5,13 +5,6 @@ import { getCurrentUser, getReports, getYouth, logout, updateReport } from '../d
 import type { CurrentUser, Report, Youth } from '../types';
 import { getReportWorkPreview, type ApprovalCoverage } from '../workSummary';
 
-const reportStatusLabel: Record<Report['status'], string> = {
-  pending: 'ממתין',
-  approved: 'אושר',
-  rejected: 'נדחה',
-  paid: 'שולם',
-};
-
 const approvalCoverageLabel: Record<ApprovalCoverage, string> = {
   mandatory: 'חובה',
   payable: 'בתשלום',
@@ -30,6 +23,7 @@ const approvalCoverageNote: Record<ApprovalCoverage, string> = {
   both: '',
 };
 
+// Shows the branch manager screen for approving or rejecting pending reports.
 const ManagerApproval = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -41,6 +35,7 @@ const ManagerApproval = () => {
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const managerUser = currentUser?.role === 'manager' ? currentUser : null;
 
+  // Loads pending reports and youth data for the manager's branch.
   const loadReports = useCallback(async () => {
     if (!managerUser) {
       return;
@@ -94,6 +89,7 @@ const ManagerApproval = () => {
     [pendingReports, reports, youthById],
   );
 
+  // Approves a pending report with the selected hour coverage.
   const handleApprove = async (reportId?: string, coverage: ApprovalCoverage = 'both') => {
     if (!reportId) {
       return;
@@ -112,6 +108,7 @@ const ManagerApproval = () => {
     }
   };
 
+  // Rejects the selected report and stores the manager's note.
   const handleReject = async () => {
     if (!selectedReport?.id || !rejectNote.trim()) {
       return;
@@ -257,7 +254,11 @@ const ManagerApproval = () => {
               <div className="chip chip-danger mb-3">דחייה</div>
               <h2 className="section-title">סיבה</h2>
             </div>
+            <label htmlFor="manager-reject-note" className="field-label">
+              סיבת הדחייה
+            </label>
             <textarea
+              id="manager-reject-note"
               value={rejectNote}
               onChange={(event) => setRejectNote(event.target.value)}
               className="field-input mb-4 min-h-28"

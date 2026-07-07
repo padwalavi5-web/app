@@ -4,6 +4,7 @@ import { FiArrowRight, FiEdit3, FiPlus, FiSave, FiTrash2 } from 'react-icons/fi'
 import { addRate, getCurrentUser, deleteRate, getRates, updateRate } from '../data';
 import type { CurrentUser, HourlyRate } from '../types';
 
+// Lets a guide manage hourly rates by age.
 const ManageRates = () => {
   const [rates, setRates] = useState<HourlyRate[]>([]);
   const [newRate, setNewRate] = useState({ age: '', rate: '' });
@@ -15,6 +16,7 @@ const ManageRates = () => {
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
+  // Loads hourly rate records for the guide rates screen.
   const loadRates = useCallback(async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true);
@@ -42,6 +44,7 @@ const ManageRates = () => {
     void loadRates(true);
   }, [guideUser, loadRates, navigate]);
 
+  // Adds a new age-based hourly rate.
   const handleAdd = async () => {
     const parsedAge = parseInt(newRate.age, 10);
     const parsedRate = parseFloat(newRate.rate);
@@ -55,6 +58,7 @@ const ManageRates = () => {
     await loadRates();
   };
 
+  // Deletes one hourly rate after confirmation.
   const handleDelete = async (id: string) => {
     if (!window.confirm('למחוק את התעריף הזה?')) {
       return;
@@ -69,11 +73,13 @@ const ManageRates = () => {
     }
   };
 
+  // Opens inline editing for one hourly rate.
   const startEdit = (rate: HourlyRate) => {
     setEditingId(rate.id);
     setEditValue({ age: rate.age.toString(), rate: rate.rate.toString() });
   };
 
+  // Saves inline edits for one hourly rate.
   const saveEdit = async (id: string) => {
     const parsedAge = parseInt(editValue.age, 10);
     const parsedRate = parseFloat(editValue.rate);

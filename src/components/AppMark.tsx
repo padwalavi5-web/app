@@ -4,6 +4,7 @@ interface AppMarkProps {
   compact?: boolean;
 }
 
+// Renders the app logo mark used in branding surfaces.
 const AppMark = ({ compact = false }: AppMarkProps) => {
   const size = compact ? 'h-14 w-14' : 'h-20 w-20';
   const iconSize = compact ? 24 : 32;

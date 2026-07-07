@@ -25,6 +25,7 @@ import { VOLUNTEER_BRANCH_NAME } from './types';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+// Wraps a Firestore promise with a timeout so hung requests fail fast in the UI.
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -44,11 +45,13 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs = REQUEST_TIMEOUT_M
   }
 };
 
+// Converts a Firestore branch document into the app's Branch shape.
 const normalizeBranch = (branchDoc: DocumentData | undefined, id?: string): Branch => ({
   name: String(branchDoc?.name ?? id ?? '').trim(),
   password: String(branchDoc?.password ?? '').trim(),
 });
 
+// Converts a Firestore youth document into the app's Youth shape.
 const normalizeYouth = (youthDoc: DocumentData | undefined, id: string): Youth => ({
   id,
   name: String(youthDoc?.name ?? '').trim(),
@@ -61,6 +64,7 @@ const normalizeYouth = (youthDoc: DocumentData | undefined, id: string): Youth =
   budget: youthDoc?.budget === undefined ? undefined : Number(youthDoc.budget),
 });
 
+// Converts a Firestore report document into the app's Report shape.
 const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Report => ({
   id,
   youthId: String(reportDoc?.youthId ?? ''),
@@ -91,6 +95,7 @@ const normalizeReport = (reportDoc: DocumentData | undefined, id: string): Repor
   reviewNote: String(reportDoc?.reviewNote ?? ''),
 });
 
+// Loads all branch records from Firestore.
 export const getBranches = async (): Promise<Branch[]> => {
   const querySnapshot = await withTimeout(getDocs(collection(db, 'branches')));
   return querySnapshot.docs
@@ -98,11 +103,13 @@ export const getBranches = async (): Promise<Branch[]> => {
     .filter((branch) => branch.name);
 };
 
+// Builds manager login credentials from branch records.
 export const getManagers = async (): Promise<ManagerCredential[]> => {
   const branches = await getBranches();
   return branches.map((branch) => ({ branch: branch.name, password: branch.password }));
 };
 
+// Creates or replaces a branch document in Firestore.
 export const saveBranch = async (branch: Branch): Promise<boolean> => {
   try {
     const normalizedBranch = normalizeBranch(branch);
@@ -118,28 +125,34 @@ export const saveBranch = async (branch: Branch): Promise<boolean> => {
   }
 };
 
+// Updates the password for an existing branch.
 export const updateBranchPassword = async (branchName: string, newPassword: string) => {
   await updateDoc(doc(db, 'branches', branchName), { password: newPassword.trim() });
 };
 
+// Deletes a branch document from Firestore.
 export const deleteBranch = async (branchName: string) => {
   await deleteDoc(doc(db, 'branches', branchName));
 };
 
+// Stores the guide login password in Firestore config.
 export const updateGuidePassword = async (newPassword: string) => {
   await setDoc(doc(db, 'config', 'guideSettings'), { password: newPassword.trim() }, { merge: true });
 };
 
+// Reads the guide login password from Firestore config.
 export const getGuidePassword = async (): Promise<string> => {
   const guideDoc = await withTimeout(getDoc(doc(db, 'config', 'guideSettings')));
   return String(guideDoc.data()?.password ?? 'admin');
 };
 
+// Loads all youth records from Firestore.
 export const getYouth = async (): Promise<Youth[]> => {
   const querySnapshot = await withTimeout(getDocs(collection(db, 'youth')));
   return querySnapshot.docs.map((youthDoc) => normalizeYouth(youthDoc.data(), youthDoc.id));
 };
 
+// Creates a new youth record with a deterministic document id.
 export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   const id = `${String(youth.name).trim()}_${String(youth.personalBudgetNumber).trim()}`;
   await setDoc(doc(db, 'youth', id), {
@@ -153,10 +166,12 @@ export const addYouth = async (youth: Omit<Youth, 'id'>) => {
   return id;
 };
 
+// Applies partial updates to an existing youth record.
 export const updateYouth = async (youthId: string, updates: Partial<Youth>) => {
   await updateDoc(doc(db, 'youth', youthId), updates);
 };
 
+// Deletes a youth record and all reports linked to that youth.
 export const deleteYouth = async (youthId: string) => {
   const batch = writeBatch(db);
   batch.delete(doc(db, 'youth', youthId));
@@ -169,11 +184,12 @@ export const deleteYouth = async (youthId: string) => {
   await batch.commit();
 };
 
+// Marks the current payable-hour balance as reset for one youth.
 export const resetPaidHours = async (youthId: string, currentTotal: number) => {
   await updateDoc(doc(db, 'youth', youthId), { lastResetHours: Number(currentTotal) });
 };
 
-// --- פונקציה חדשה לעדכון אטומי של הנתונים ---
+// Atomically resets payable balances and marks approved reports as paid.
 export const finalizePaymentCycle = async (
   youthUpdates: { youthId: string; lastResetHours: number }[],
   reportIds: string[]
@@ -187,42 +203,50 @@ export const finalizePaymentCycle = async (
 
   reportIds.forEach((id) => {
     const reportRef = doc(db, 'reports', id);
-    batch.update(reportRef, { status: 'paid' }); // מסמן את הדיווחים כ"שולמו"
+    batch.update(reportRef, { status: 'paid' });
   });
 
   await batch.commit();
 };
 
+// Loads all hourly rate records from Firestore.
 export const getRates = async (): Promise<HourlyRate[]> => {
   const querySnapshot = await withTimeout(getDocs(collection(db, 'rates')));
   return querySnapshot.docs.map((rateDoc) => ({ id: rateDoc.id, ...rateDoc.data() }) as HourlyRate);
 };
 
+// Adds a new hourly rate record.
 export const addRate = async (rate: Omit<HourlyRate, 'id'>) => {
   await addDoc(collection(db, 'rates'), rate);
 };
 
+// Deletes an hourly rate record.
 export const deleteRate = async (rateId: string) => {
   await deleteDoc(doc(db, 'rates', rateId));
 };
 
+// Updates an existing hourly rate record.
 export const updateRate = async (rateId: string, updates: Partial<HourlyRate>) => {
   await updateDoc(doc(db, 'rates', rateId), updates);
 };
 
+// Creates a new work or volunteer report.
 export const addReport = async (report: Omit<Report, 'id'>) => {
   await addDoc(collection(db, 'reports'), report);
 };
 
+// Loads all report records from Firestore.
 export const getReports = async (): Promise<Report[]> => {
   const querySnapshot = await withTimeout(getDocs(collection(db, 'reports')));
   return querySnapshot.docs.map((reportDoc) => normalizeReport(reportDoc.data(), reportDoc.id));
 };
 
+// Applies partial updates to an existing report.
 export const updateReport = async (reportId: string, updates: Partial<Report>) => {
   await updateDoc(doc(db, 'reports', reportId), updates);
 };
 
+// Calculates age in full years from an ISO birth date string.
 export const calculateAge = (birthDate: string): number => {
   const birth = new Date(birthDate);
   const today = new Date();
@@ -238,10 +262,12 @@ export const calculateAge = (birthDate: string): number => {
   return age;
 };
 
+// Persists the signed-in user in browser local storage.
 export const setCurrentUser = (user: CurrentUser) => {
   localStorage.setItem('currentUser', JSON.stringify(user));
 };
 
+// Reads the signed-in user from browser local storage.
 export const getCurrentUser = (): CurrentUser | null => {
   try {
     const raw = localStorage.getItem('currentUser');
@@ -251,6 +277,7 @@ export const getCurrentUser = (): CurrentUser | null => {
   }
 };
 
+// Clears the signed-in user from browser local storage.
 export const logout = () => {
   localStorage.removeItem('currentUser');
 };

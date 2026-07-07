@@ -14,6 +14,7 @@ const reportStatusLabel: Record<Report['status'], string> = {
 
 const GUIDE_REVIEW_NOTE = 'אושר על ידי המדריך';
 
+// Builds the guide dashboard with summary tables, exports, and report approvals.
 const GuideSummary = () => {
   const [youthList, setYouthList] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -162,6 +163,7 @@ const GuideSummary = () => {
   };
 
   // מאשרת דיווח שממתין לאישור מדריך.
+  // Approves a report that is waiting for guide approval.
   const handleApprove = async (reportId?: string) => {
     if (!reportId) {
       return;
@@ -177,6 +179,7 @@ const GuideSummary = () => {
   };
 
   // דוחה דיווח ושומרת סיבת דחייה.
+  // Rejects a report and stores the guide's rejection note.
   const handleReject = async () => {
     if (!selectedReport?.id || !rejectNote.trim()) {
       return;
@@ -351,7 +354,11 @@ const GuideSummary = () => {
               <div className="chip chip-danger mb-3">דחייה</div>
               <h2 className="section-title">סיבה</h2>
             </div>
+            <label htmlFor="guide-reject-note" className="field-label">
+              סיבת הדחייה
+            </label>
             <textarea
+              id="guide-reject-note"
               value={rejectNote}
               onChange={(event) => setRejectNote(event.target.value)}
               className="field-input mb-4 min-h-28"

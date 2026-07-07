@@ -1,25 +1,19 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration
+// Loads Firebase config from Vercel/Vite env vars, falling back to the bundled project defaults.
 const firebaseConfig = {
-  apiKey: "AIzaSyA0MzwidiAeCMIkDBbOPMKzKQPjEC7J75U",
-  authDomain: "kibbutz-app.firebaseapp.com",
-  projectId: "kibbutz-app",
-  storageBucket: "kibbutz-app.firebasestorage.app",
-  messagingSenderId: "483095906433",
-  appId: "1:483095906433:web:5dbdc65a56e371e20fe580",
-  measurementId: "G-XFX61PL8SM"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? 'AIzaSyA0MzwidiAeCMIkDBbOPMKzKQPjEC7J75U',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'kibbutz-app.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'kibbutz-app',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? 'kibbutz-app.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '483095906433',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '1:483095906433:web:5dbdc65a56e371e20fe580',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ?? 'G-XFX61PL8SM',
 };
 
-// Initialize Firebase
+// Creates the single Firebase app instance used across the project.
 const app = initializeApp(firebaseConfig);
 
-// ייצוא השירותים לשימוש בשאר האפליקציה
-export const auth = getAuth(app);
+// Shared Firestore database handle for all data queries and writes.
 export const db = getFirestore(app);
-
-// הגדרת זיכרון לחיבור המשתמש (ישאר מחובר גם בריפרש)
-void setPersistence(auth, browserLocalPersistence).catch(() => undefined);

@@ -3,12 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Mounts the React application into the page root element.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
 
+// Registers the service worker so the PWA can update in the background.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -36,6 +38,7 @@ if ('serviceWorker' in navigator) {
   });
 
   let hasRefreshed = false;
+  // Reloads the page once when a new service worker takes control.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hasRefreshed) return;
     hasRefreshed = true;

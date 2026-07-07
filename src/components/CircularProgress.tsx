@@ -6,6 +6,7 @@
   color?: string;
 }
 
+// Renders a circular progress ring with the current value centered inside.
 const CircularProgress = ({ value, max, size = 120, strokeWidth = 8, color = '#16a34a' }: CircularProgressProps) => {
   const safeMax = Math.max(max, 1);
   const safeValue = Math.max(0, Math.min(value, safeMax));
@@ -18,13 +19,8 @@ const CircularProgress = ({ value, max, size = 120, strokeWidth = 8, color = '#1
   return (
     <div className="relative inline-flex items-center justify-center">
       <div
-        className="absolute rounded-full"
-        style={{
-          width: size * 0.78,
-          height: size * 0.78,
-          background: 'radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(244,248,251,0.88) 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 30px rgba(15,35,52,0.08)',
-        }}
+        className="circular-progress-inner absolute rounded-full"
+        style={{ '--progress-inner-size': `${size * 0.78}px` } as React.CSSProperties}
       />
       <svg width={size} height={size} className="-rotate-90 drop-shadow-[0_16px_26px_rgba(15,118,110,0.14)]">
         <defs>

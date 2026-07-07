@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
+// Reads the saved theme preference or falls back to the system color scheme.
 const resolveInitialTheme = (): Theme => {
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'light' || savedTheme === 'dark') {
@@ -12,6 +13,7 @@ const resolveInitialTheme = (): Theme => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
+// Applies the initial theme class to the document root.
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const theme = useMemo(() => resolveInitialTheme(), []);
 

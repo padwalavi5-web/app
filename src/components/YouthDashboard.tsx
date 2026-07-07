@@ -38,6 +38,7 @@ const statusClasses: Record<Report['status'], string> = {
   paid: 'chip bg-[rgba(14,116,144,0.12)] text-cyan-700 border-[rgba(14,116,144,0.12)]',
 };
 
+// Shows the youth home screen with progress stats and report submission.
 const YouthDashboard = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [rates, setRates] = useState<HourlyRate[]>([]);
@@ -257,8 +258,8 @@ const YouthDashboard = () => {
                   </div>
                   <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-[#2563eb] transition-all duration-500"
-                      style={{ width: `${getVolunteerProgressPercent(summary.volunteerCompletedHours)}%` }}
+                      className="volunteer-progress-fill h-full rounded-full bg-[#2563eb] transition-all duration-500"
+                      style={{ '--volunteer-progress': `${getVolunteerProgressPercent(summary.volunteerCompletedHours)}%` } as React.CSSProperties}
                     />
                   </div>
                 </div>

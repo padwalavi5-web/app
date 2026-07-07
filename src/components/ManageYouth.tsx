@@ -53,11 +53,13 @@ const parseHourInput = (value: string) => {
   return Number.isFinite(parsedValue) ? parsedValue : 0;
 };
 
+// Resolves the hourly rate for a youth based on age.
 const getAgeRate = (youthItem: Youth, rates: HourlyRate[]) => {
   const age = calculateAge(youthItem.birthDate);
   return rates.find((rate) => rate.age === age)?.rate ?? 0;
 };
 
+// Lets a guide browse youth, edit hour balances, and review pending reports.
 const ManageYouth = () => {
   const [youth, setYouth] = useState<Youth[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -167,16 +169,19 @@ const ManageYouth = () => {
     }
   };
 
+  // Closes the youth detail modal and clears any open sub-panels.
   const closeDetailModal = () => {
     setSelectedYouthId(null);
     setActivePanel(null);
     setEditModal(null);
   };
 
+  // Closes the hour-value editor popup.
   const closeEditModal = () => {
     setEditModal(null);
   };
 
+  // Closes the pending-reports panel and clears reject state.
   const closePendingModal = () => {
     setActivePanel(null);
     setRejectModalReport(null);
@@ -250,6 +255,7 @@ const ManageYouth = () => {
     }
   };
 
+  // Adds a guide review note to a pending manager-targeted report.
   const handleGuideApprove = async (reportId?: string) => {
     if (!reportId) {
       return;
@@ -264,6 +270,7 @@ const ManageYouth = () => {
     }
   };
 
+  // Rejects a pending report from the guide pending-reports panel.
   const handleGuideReject = async () => {
     if (!rejectModalReport?.id || !rejectNote.trim()) {
       return;
@@ -507,7 +514,11 @@ const ManageYouth = () => {
               <h2 className="section-title">{editModal.label}</h2>
             </div>
 
+            <label htmlFor="edit-hours-input" className="field-label sr-only">
+              {editModal.label}
+            </label>
             <input
+              id="edit-hours-input"
               value={editModal.value}
               onChange={(event) => setEditModal((current) => (current ? { ...current, value: event.target.value } : current))}
               className="field-input mb-4"
@@ -537,7 +548,11 @@ const ManageYouth = () => {
               <div className="chip chip-danger mb-3">דחייה</div>
               <h2 className="section-title">סיבה</h2>
             </div>
+            <label htmlFor="reject-note-input" className="field-label">
+              סיבת הדחייה
+            </label>
             <textarea
+              id="reject-note-input"
               value={rejectNote}
               onChange={(event) => setRejectNote(event.target.value)}
               className="field-input mb-4 min-h-28"

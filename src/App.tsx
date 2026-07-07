@@ -10,6 +10,7 @@ const ManageYouth = lazy(() => import('./components/ManageYouth'));
 const ManageBranches = lazy(() => import('./components/ManageBranches'));
 const ManageRates = lazy(() => import('./components/ManageRates'));
 
+// Defines the top-level route map and lazy-loaded screens.
 function App() {
   return (
     <ThemeProvider>

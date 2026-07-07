@@ -84,6 +84,7 @@ const getYouthRate = (youth: Youth, rates: HourlyRate[]) => {
   return matchedRate?.rate ?? 0;
 };
 
+// Determine how an approved report should count toward mandatory and payable hours.
 const getApprovalCoverage = (report: Report): ApprovalCoverage => {
   if (
     report.approvalCoverage === 'mandatory' ||
@@ -96,6 +97,7 @@ const getApprovalCoverage = (report: Report): ApprovalCoverage => {
   return 'both';
 };
 
+// Split report hours into mandatory and payable portions based on the 90-hour cap.
 const getNaturalSplit = (cumulativeHours: number, totalHours: number) => {
   const mandatoryHours = Math.max(0, Math.min(MANDATORY_HOURS_LIMIT - cumulativeHours, totalHours));
   const payableHours = Math.max(0, totalHours - mandatoryHours);
@@ -141,9 +143,11 @@ export const getCycleVolunteerHours = (youthId: string, reports: Report[], refer
   getCycleVolunteerReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
 
 // Sum tracked report hours inside the current work cycle.
+// Sum tracked report hours inside the current work cycle.
 const getCycleTrackedHours = (youthId: string, reports: Report[], referenceDate: Date) =>
   getCycleTrackedReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
 
+// Build per-report mandatory/payable contributions for one youth in the current cycle.
 const getCycleWorkContributions = (youth: Youth, reports: Report[], referenceDate: Date) => {
   const workReports = getCycleTrackedReports(youth.id, reports, referenceDate);
   const contributions: ReportWorkContribution[] = [];
@@ -202,6 +206,7 @@ export const buildYouthHoursUpdate = (
   };
 };
 
+// Preview how one pending report would split into mandatory and payable hours.
 export const getReportWorkPreview = (
   youth: Youth,
   reports: Report[],
@@ -227,6 +232,7 @@ export const getReportWorkPreview = (
   return split;
 };
 
+// Aggregate payable hours and amounts by branch for one youth.
 export const buildPayableBranchTotals = (
   youth: Youth,
   reports: Report[],

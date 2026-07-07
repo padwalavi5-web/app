@@ -13,6 +13,7 @@ import type { Branch, CurrentUser } from '../types';
 
 const emptyBranch: Branch = { name: '', password: '' };
 
+// Lets a guide create branches and update branch or guide passwords.
 const ManageBranches = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [newBranch, setNewBranch] = useState<Branch>(emptyBranch);
@@ -25,6 +26,7 @@ const ManageBranches = () => {
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
   const guideUser = currentUser?.role === 'guide' ? currentUser : null;
 
+  // Loads branch records for the guide branch-management screen.
   const fetchBranches = useCallback(async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true);
@@ -51,6 +53,7 @@ const ManageBranches = () => {
     void fetchBranches(true);
   }, [fetchBranches, guideUser, navigate]);
 
+  // Creates a new branch with name and password.
   const handleAdd = async () => {
     if (!newBranch.name.trim() || !newBranch.password.trim()) {
       alert('צריך למלא שם ענף וסיסמה.');
@@ -67,6 +70,7 @@ const ManageBranches = () => {
     await fetchBranches();
   };
 
+  // Saves a new password for one branch.
   const handleSaveBranchPassword = async (name: string) => {
     if (!editingPassword.trim()) {
       alert('צריך להכניס סיסמה חדשה.');
@@ -79,6 +83,7 @@ const ManageBranches = () => {
     await fetchBranches();
   };
 
+  // Saves the global guide login password.
   const handleSaveGuidePassword = async () => {
     if (!guidePassword.trim()) {
       alert('צריך להכניס סיסמת מדריך חדשה.');
