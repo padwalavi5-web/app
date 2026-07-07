@@ -2,11 +2,8 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyA0MzwidiAeCMIkDBbOPMKzKQPjEC7J75U",
   authDomain: "kibbutz-app.firebaseapp.com",
@@ -19,7 +16,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// ייצוא השירותים לשימוש בשאר האפליקציה
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// הגדרת זיכרון לחיבור המשתמש (ישאר מחובר גם בריפרש)
 void setPersistence(auth, browserLocalPersistence).catch(() => undefined);
