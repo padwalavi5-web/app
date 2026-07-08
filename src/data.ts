@@ -262,6 +262,13 @@ export const calculateAge = (birthDate: string): number => {
   return age;
 };
 
+// Checks if today is the user's birthday. Compares month and day only.
+export const isBirthdayToday = (birthDate: string): boolean => {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  return birth.getMonth() === today.getMonth() && birth.getDate() === today.getDate();
+};
+
 // Persists the signed-in user in browser local storage.
 export const setCurrentUser = (user: CurrentUser) => {
   localStorage.setItem('currentUser', JSON.stringify(user));

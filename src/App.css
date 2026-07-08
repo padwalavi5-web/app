@@ -182,3 +182,71 @@
     border-right-color: var(--border);
   }
 }
+
+/* Birthday celebration styles */
+@keyframes float-bounce {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.05);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(217, 119, 6, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.birthday-banner {
+  animation: float-bounce 2.5s ease-in-out infinite;
+  
+  & > div:first-child {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+.birthday-banner::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background: linear-gradient(45deg, #fbbf24, #f59e0b, #d97706, #fbbf24);
+  background-size: 300% 300%;
+  border-radius: 22px;
+  z-index: -1;
+  animation: shimmer 3s linear infinite;
+  opacity: 0.6;
+}
+
+/* Confetti effect */
+.confetti {
+  position: fixed;
+  pointer-events: none;
+  width: 10px;
+  height: 10px;
+  animation: confetti-fall 3s ease-in forwards;
+}
+

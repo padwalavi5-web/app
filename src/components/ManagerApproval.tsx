@@ -209,22 +209,27 @@ const ManagerApproval = () => {
                     ) : null}
 
                     {isBoth ? (
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <button type="button" onClick={() => void handleApprove(report.id, 'both')} className="btn-primary">
-                          <FiCheck size={16} />
-                          {approvalCoverageActionLabel.both}
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-slate-600 mb-2">בחר אפשרות אישור:</div>
+                        <button 
+                          type="button" 
+                          onClick={() => void handleApprove(report.id, 'both')} 
+                          className="btn-primary w-full justify-center py-2.5"
+                        >
+                          <FiCheck size={18} />
+                          <span>אשר הכל (חובה + בתשלום)</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => void handleApprove(report.id, 'mandatory')}
-                          className="btn-olive"
+                          className="btn-olive w-full justify-center py-2.5"
                         >
-                          <FiCheck size={16} />
-                          {approvalCoverageActionLabel.mandatory}
+                          <FiCheck size={18} />
+                          <span>אשר חובה בלבד</span>
                         </button>
-                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger">
-                          <FiX size={16} />
-                          לא לאשר
+                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger w-full justify-center py-2.5">
+                          <FiX size={18} />
+                          <span>דחייה</span>
                         </button>
                       </div>
                     ) : (
@@ -235,7 +240,7 @@ const ManagerApproval = () => {
                         </button>
                         <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger">
                           <FiX size={16} />
-                          לא לאשר
+                          דחייה
                         </button>
                       </div>
                     )}

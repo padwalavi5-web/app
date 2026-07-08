@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
-import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout, updateReport } from '../data';
+import { FiCheck, FiLogOut, FiX, FiGift } from 'react-icons/fi';
+import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout, updateReport, isBirthdayToday } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
-import { buildYouthWorkSummary, isReportInCurrentCycle } from '../workSummary';
+import { buildYouthWorkSummary, isReportInCurrentCycle, buildPayableBranchTotals } from '../workSummary';
 
 const reportStatusLabel: Record<Report['status'], string> = {
   pending: 'ממתין',
@@ -25,6 +25,8 @@ const GuideSummary = () => {
   const [selectedYouth, setSelectedYouth] = useState<Youth | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  const [committeeModalReport, setCommitteeModalReport] = useState<Report | null>(null);
+  const [committeeInput, setCommitteeInput] = useState('');
   const navigate = useNavigate();
 
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
@@ -97,20 +99,48 @@ const GuideSummary = () => {
   // מייצאת את טבלת הסיכום לקובץ CSV.
   const exportCsv = () => {
     const escapeValue = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
-    const csvContent =
-      '\uFEFF' +
-      [
-        ['שם', 'מספר תקציב', 'שעות החודש', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
-        ...summaryRows.map((row) =>
-          [
-            row.youth.name,
-            row.youth.personalBudgetNumber,
-            row.summary.currentMonthHours.toFixed(1),
-            row.summary.payablePendingHours.toFixed(1),
-            row.summary.payablePendingAmount.toFixed(2),
-          ].map(escapeValue).join(','),
-        ),
-      ].join('\n');
+    
+    // Build main summary section
+    const mainSummary = [
+      ['שם', 'מספר תקציב', 'שעות החודש', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
+      ...summaryRows.map((row) =>
+        [
+          row.youth.name,
+          row.youth.personalBudgetNumber,
+          row.summary.currentMonthHours.toFixed(1),
+          row.summary.payablePendingHours.toFixed(1),
+          row.summary.payablePendingAmount.toFixed(2),
+        ].map(escapeValue).join(','),
+      ),
+    ];
+    
+    // Build branch breakdown section
+    const branchBreakdown: string[] = ['', '', '', ''];
+    branchBreakdown.push(''); // Empty row separator
+    branchBreakdown.push('פירוט לפי ענף:');
+    branchBreakdown.push('שם,תקציב,ענף,שעות בתשלום,סכום בתשלום');
+    
+    summaryRows.forEach((row) => {
+      const branchTotals = buildPayableBranchTotals(row.youth, reports, rates);
+      if (branchTotals.length > 0) {
+        branchTotals.forEach((branchEntry) => {
+          const branchLabel = branchEntry.chargeCommittee 
+            ? `${branchEntry.branch} (${branchEntry.chargeCommittee})`
+            : branchEntry.branch;
+          branchBreakdown.push(
+            [
+              row.youth.name,
+              row.youth.personalBudgetNumber,
+              branchLabel,
+              branchEntry.payableHours.toFixed(1),
+              branchEntry.payableAmount.toFixed(2),
+            ].map(escapeValue).join(',')
+          );
+        });
+      }
+    });
+    
+    const csvContent = '\uFEFF' + [...mainSummary, ...branchBreakdown].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -164,13 +194,59 @@ const GuideSummary = () => {
 
   // מאשרת דיווח שממתין לאישור מדריך.
   // Approves a report that is waiting for guide approval.
+  // For "Other" (אחר) paid hours, prompts for committee entry first.
   const handleApprove = async (reportId?: string) => {
     if (!reportId) {
       return;
     }
 
+    const report = reports.find((r) => r.id === reportId);
+    if (!report) {
+      return;
+    }
+
+    // Check if this is an "Other" branch with paid hours that needs committee entry
+    if (report.branch === 'אחר' && !report.chargeCommittee) {
+      // Check if this report has payable hours
+      const youth = youthList.find((y) => y.id === report.youthId);
+      if (youth) {
+        // Get the preview to see if there are payable hours
+        const { buildPayableBranchTotals } = await import('../workSummary');
+        const branchTotals = buildPayableBranchTotals(youth, reports, rates);
+        const hasPayableHours = branchTotals.some((b) => b.branch === 'אחר' && b.payableHours > 0);
+        
+        if (hasPayableHours) {
+          setCommitteeModalReport(report);
+          setCommitteeInput('');
+          return;
+        }
+      }
+    }
+
     try {
       await updateReport(reportId, { status: 'approved', reviewNote: GUIDE_REVIEW_NOTE });
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      alert('אישור הדיווח נכשל.');
+    }
+  };
+
+  // Completes the approval with the entered committee name for "Other" hours.
+  const handleApproveWithCommittee = async () => {
+    if (!committeeModalReport?.id || !committeeInput.trim()) {
+      alert('אנא הכנס שם של ועדה');
+      return;
+    }
+
+    try {
+      await updateReport(committeeModalReport.id, {
+        status: 'approved',
+        chargeCommittee: committeeInput.trim(),
+        reviewNote: GUIDE_REVIEW_NOTE,
+      });
+      setCommitteeModalReport(null);
+      setCommitteeInput('');
       await fetchData();
     } catch (error) {
       console.error(error);
@@ -270,6 +346,15 @@ const GuideSummary = () => {
                         <td className="font-semibold">
                           <span className="inline-flex items-center gap-2">
                             <span>{row.youth.name}</span>
+                            {isBirthdayToday(row.youth.birthDate) ? (
+                              <span
+                                className="text-lg"
+                                title="יום הולדת היום!"
+                                aria-label="יום הולדת היום!"
+                              >
+                                🎂
+                              </span>
+                            ) : null}
                             {pendingApprovalsCount > 0 ? (
                               <span
                                 className="status-dot"
@@ -317,7 +402,12 @@ const GuideSummary = () => {
                   <div key={report.id} className="plain-card p-4">
                     <div className="mb-3 flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-base font-semibold">{report.branch}</div>
+                        <div className="text-base font-semibold">
+                          {report.branch}
+                          {report.branch === 'אחר' && report.chargeCommittee ? (
+                            <span className="text-sm text-slate-600"> ({report.chargeCommittee})</span>
+                          ) : null}
+                        </div>
                         <div className="page-subtitle text-sm">{report.date} | {report.startTime}-{report.endTime}</div>
                       </div>
                       <div className="chip">{reportStatusLabel[report.status]}</div>
@@ -373,6 +463,47 @@ const GuideSummary = () => {
                 onClick={() => {
                   setSelectedReport(null);
                   setRejectNote('');
+                }}
+                className="btn-sand flex-1"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {committeeModalReport && (
+        <div className="modal-backdrop" dir="rtl">
+          <div className="modal-panel max-w-md">
+            <div className="mb-4">
+              <div className="chip chip-info mb-3">בחירת ועדה</div>
+              <h2 className="section-title">ועדה לחייב</h2>
+            </div>
+            <p className="mb-4 text-sm text-slate-600">
+              דיווח זה מסווג כ"אחר" (בתשלום). אנא בחר איזה ועדה לחייב עבור שעות אלו.
+            </p>
+            <label htmlFor="committee-input" className="field-label">
+              שם הועדה
+            </label>
+            <input
+              id="committee-input"
+              type="text"
+              value={committeeInput}
+              onChange={(event) => setCommitteeInput(event.target.value)}
+              className="field-input mb-4"
+              placeholder="לדוגמה: ועדת חינוך"
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={handleApproveWithCommittee} className="btn-olive flex-1">
+                <FiCheck size={16} />
+                אשר
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCommitteeModalReport(null);
+                  setCommitteeInput('');
                 }}
                 className="btn-sand flex-1"
               >

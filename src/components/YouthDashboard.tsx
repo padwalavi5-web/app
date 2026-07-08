@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCalendar, FiClock, FiLogOut, FiSend, FiTrendingUp } from 'react-icons/fi';
-import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout } from '../data';
+import { FiCalendar, FiClock, FiLogOut, FiSend, FiTrendingUp, FiGift } from 'react-icons/fi';
+import { addReport, getBranches, getCurrentUser, getRates, getReports, getYouth, logout, isBirthdayToday } from '../data';
 import CircularProgress from './CircularProgress';
 import { VOLUNTEER_BRANCH_NAME, type Branch, type CurrentUser, type HourlyRate, type Report, type Youth } from '../types';
 import {
@@ -23,6 +23,24 @@ const isGuideReviewedBranch = (branchName: string) =>
 // מחשבת את אחוז ההתקדמות של שעות ההתנדבות מתוך היעד השנתי.
 const getVolunteerProgressPercent = (completedHours: number) =>
   Math.min(100, Math.max(0, (completedHours / VOLUNTEER_HOURS_LIMIT) * 100));
+
+// Creates festive confetti animation for birthday celebration
+const createBirthdayConfetti = () => {
+  const colors = ['#fbbf24', '#f59e0b', '#d97706', '#fcd34d', '#fbbf24'];
+  const confettiCount = 50;
+  
+  for (let i = 0; i < confettiCount; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.animationDelay = Math.random() * 0.3 + 's';
+    confetti.style.animationDuration = (Math.random() * 1.5 + 2.5) + 's';
+    document.body.appendChild(confetti);
+    
+    setTimeout(() => confetti.remove(), 3500);
+  }
+};
 
 const statusLabels: Record<Report['status'], string> = {
   pending: 'ממתין',
@@ -55,6 +73,7 @@ const YouthDashboard = () => {
     endTime: '',
     details: '',
   });
+  const confettiShownRef = useRef(false);
   const navigate = useNavigate();
   const redirectedRef = useRef(false);
   const [currentUser] = useState<CurrentUser | null>(() => getCurrentUser() as CurrentUser | null);
@@ -90,6 +109,12 @@ const YouthDashboard = () => {
       setRates(rateList);
       setReports(reportList);
       setYouth(youthRecord);
+      
+      // Trigger confetti once when birthday is detected
+      if (youthRecord && isBirthdayToday(youthRecord.birthDate) && !confettiShownRef.current) {
+        confettiShownRef.current = true;
+        setTimeout(() => createBirthdayConfetti(), 300);
+      }
     } catch (error) {
       console.error(error);
       setLoadError('טעינת הנתונים נכשלה');
@@ -234,6 +259,16 @@ const YouthDashboard = () => {
               </button>
             </div>
           ) : null}
+
+          {youth && isBirthdayToday(youth.birthDate) && (
+            <div className="birthday-banner mb-4 flex items-center gap-3 rounded-[20px] border border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 px-4 py-3">
+              <span className="text-2xl"><FiGift /></span>
+              <div className="flex-1">
+                <div className="font-bold text-amber-900">יום הולדת שמח! 🎂</div>
+                <div className="text-sm text-amber-800">היום היום המיוחד שלך! חגיגה יש!</div>
+              </div>
+            </div>
+          )}
 
           {summary && (
             <div className="hero-grid items-stretch">
