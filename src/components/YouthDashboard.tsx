@@ -265,7 +265,6 @@ const YouthDashboard = () => {
               <span className="text-2xl"><FiGift /></span>
               <div className="flex-1">
                 <div className="font-bold text-amber-900">יום הולדת שמח! 🎂</div>
-                <div className="text-sm text-amber-800">היום היום המיוחד שלך! חגיגה יש!</div>
               </div>
             </div>
           )}
