@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiLogOut, FiX, FiGift } from 'react-icons/fi';
+import { FiCheck, FiLogOut, FiX } from 'react-icons/fi';
 import { finalizePaymentCycle, getCurrentUser, getRates, getReports, getYouth, logout, updateReport, isBirthdayToday } from '../data';
 import type { CurrentUser, HourlyRate, Report, Youth } from '../types';
 import { buildYouthWorkSummary, isReportInCurrentCycle, buildPayableBranchTotals } from '../workSummary';
