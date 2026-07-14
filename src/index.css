@@ -25,6 +25,9 @@
 
 html {
   min-height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   background:
     radial-gradient(circle at 8% 10%, rgba(127, 143, 184, 0.1), transparent 26%),
     radial-gradient(circle at 92% 14%, rgba(63, 122, 102, 0.11), transparent 24%),
@@ -35,7 +38,12 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
   color: var(--text-main);
   font-family: 'Noto Sans Hebrew', 'Assistant', 'Segoe UI', sans-serif;
 }
@@ -68,7 +76,8 @@ body::after {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100svh;
 }
 
 button,
@@ -80,7 +89,10 @@ textarea {
 
 @layer components {
   .app-shell {
-    @apply min-h-screen px-4 py-5 sm:px-6 sm:py-8;
+    min-height: 100dvh;
+    min-height: 100svh;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    @apply px-4 py-5 sm:px-6 sm:py-8;
   }
 
   .login-shell {
@@ -97,13 +109,7 @@ textarea {
     box-shadow: var(--shadow-lg);
     -webkit-backdrop-filter: blur(22px);
     backdrop-filter: blur(22px);
-    @apply relative overflow-hidden rounded-[26px];
-  }
-
-  .glass-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
+    @apply relative rounded-[26px];
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 42%, rgba(127, 143, 184, 0.06) 100%);
     pointer-events: none;
   }
@@ -121,7 +127,7 @@ textarea {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 244, 239, 0.93));
     border: 1px solid rgba(124, 134, 145, 0.14);
     box-shadow: 0 16px 34px rgba(43, 53, 65, 0.07);
-    @apply relative overflow-hidden rounded-[24px];
+    @apply relative rounded-[24px];
   }
 
   .plain-panel::before {
@@ -136,7 +142,7 @@ textarea {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(251, 249, 246, 0.95));
     border: 1px solid rgba(124, 134, 145, 0.12);
     box-shadow: 0 10px 24px rgba(43, 53, 65, 0.055);
-    @apply relative overflow-hidden rounded-[20px];
+    @apply relative rounded-[20px];
   }
 
   .plain-card::before {
@@ -439,7 +445,7 @@ textarea {
   }
 
   .table-shell {
-    @apply overflow-hidden rounded-[24px] border border-slate-200/70 bg-white/80 shadow-[0_14px_28px_rgba(43,53,65,0.07)];
+    @apply rounded-[24px] border border-slate-200/70 bg-white/80 shadow-[0_14px_28px_rgba(43,53,65,0.07)];
   }
 
   .table-shell table {
