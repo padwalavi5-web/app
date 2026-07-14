@@ -74,7 +74,7 @@ const GuideSummary = () => {
     const counts = new Map<string, number>();
 
     reports.forEach((report) => {
-      if (report.status !== 'pending' || report.approvalTarget !== 'guide') {
+      if (report.status !== 'pending' || report.approvalTarget !== 'guide' || !isReportInCurrentCycle(report.date)) {
         return;
       }
 
@@ -95,6 +95,11 @@ const GuideSummary = () => {
         : [],
     [reports, selectedYouth],
   );
+
+  const openYouthDetails = useCallback((youth: Youth) => {
+    console.log('openYouthDetails', youth.id, youth.name);
+    setSelectedYouth(youth);
+  }, []);
 
   // מייצאת את טבלת הסיכום לקובץ CSV.
   const exportCsv = () => {
@@ -325,55 +330,55 @@ const GuideSummary = () => {
               <p className="page-subtitle">אין נתונים</p>
             </div>
           ) : (
-            <div className="table-shell">
-              <table>
-                <thead>
-                  <tr>
-                    <th>שם</th>
-                    <th>תקציב</th>
-                    <th>החודש</th>
-                    <th>התנדבות</th>
-                    <th>לתשלום</th>
-                    <th>סכום</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summaryRows.map((row) => {
-                    const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(row.youth.id) ?? 0;
+            <div className="space-y-3">
+              {summaryRows.map((row) => {
+                const pendingApprovalsCount = pendingGuideApprovalsByYouthId.get(row.youth.id) ?? 0;
 
-                    return (
-                      <tr key={row.youth.id} className="cursor-pointer" onClick={() => setSelectedYouth(row.youth)}>
-                        <td className="font-semibold">
-                          <span className="inline-flex items-center gap-2">
-                            <span>{row.youth.name}</span>
-                            {isBirthdayToday(row.youth.birthDate) ? (
-                              <span
-                                className="text-lg"
-                                title="יום הולדת היום!"
-                                aria-label="יום הולדת היום!"
-                              >
-                                🎂
-                              </span>
-                            ) : null}
-                            {pendingApprovalsCount > 0 ? (
-                              <span
-                                className="status-dot"
-                                title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
-                                aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
-                              />
-                            ) : null}
-                          </span>
-                        </td>
-                        <td>{row.youth.personalBudgetNumber}</td>
-                        <td>{row.summary.currentMonthHours.toFixed(1)}</td>
-                        <td>{row.summary.volunteerCompletedHours.toFixed(1)}</td>
-                        <td>{row.summary.payablePendingHours.toFixed(1)}</td>
-                        <td className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                return (
+                  <button
+                    key={row.youth.id}
+                    type="button"
+                    onClick={() => openYouthDetails(row.youth)}
+                    className="plain-card w-full p-4 text-right transition duration-200 hover:-translate-y-0.5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold">{row.youth.name}</span>
+                          {isBirthdayToday(row.youth.birthDate) ? (
+                            <span className="text-lg" title="יום הולדת היום!" aria-label="יום הולדת היום!">
+                              🎂
+                            </span>
+                          ) : null}
+                          {pendingApprovalsCount > 0 ? (
+                            <span
+                              className="status-dot"
+                              title={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                              aria-label={`יש ${pendingApprovalsCount} דיווחים שממתינים לאישור`}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="page-subtitle mt-1 text-sm">תקציב {row.youth.personalBudgetNumber}</div>
+                      </div>
+
+                      <div className="grid w-full gap-2 text-sm sm:w-auto sm:min-w-[260px] sm:grid-cols-3">
+                        <div className="rounded-2xl bg-slate-50/90 px-3 py-2">
+                          <div className="page-subtitle text-[11px]">החודש</div>
+                          <div className="font-semibold">{row.summary.currentMonthHours.toFixed(1)}</div>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50/90 px-3 py-2">
+                          <div className="page-subtitle text-[11px]">התנדבות</div>
+                          <div className="font-semibold">{row.summary.volunteerCompletedHours.toFixed(1)}</div>
+                        </div>
+                        <div className="rounded-2xl bg-emerald-50/90 px-3 py-2">
+                          <div className="page-subtitle text-[11px]">לתשלום</div>
+                          <div className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>
@@ -382,7 +387,7 @@ const GuideSummary = () => {
       {selectedYouth && (
         <div className="modal-backdrop" dir="rtl">
           <div className="modal-panel max-w-3xl">
-            <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <h2 className="section-title">{selectedYouth.name}</h2>
                 <div className="page-subtitle">היסטוריית עבודות</div>
@@ -399,7 +404,7 @@ const GuideSummary = () => {
             ) : (
               <div className="space-y-3">
                 {selectedYouthReports.map((report) => (
-                  <div key={report.id} className="plain-card p-4">
+                  <div key={report.id} className="plain-card p-4 break-words">
                     <div className="mb-3 flex items-start justify-between gap-4">
                       <div>
                         <div className="text-base font-semibold">
