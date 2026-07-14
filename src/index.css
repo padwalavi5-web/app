@@ -87,6 +87,24 @@ textarea {
   font: inherit;
 }
 
+button {
+  position: relative;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 @layer components {
   .app-shell {
     min-height: 100dvh;
@@ -194,6 +212,7 @@ textarea {
     background: rgba(255, 255, 255, 0.94);
     color: var(--text-main);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    min-height: 48px;
   }
 
   .field-input:focus {
@@ -424,6 +443,7 @@ textarea {
 
   .segmented button {
     @apply rounded-2xl px-4 py-3 text-sm font-semibold transition;
+    min-height: 46px;
   }
 
   .segmented-olive button[data-active='true'] {
