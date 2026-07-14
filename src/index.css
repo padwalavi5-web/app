@@ -87,11 +87,24 @@ textarea {
   font: inherit;
 }
 
-button {
+button,
+input,
+select,
+textarea {
   position: relative;
   pointer-events: auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  z-index: 1;
+}
+
+input,
+select,
+textarea {
+  appearance: auto;
+  -webkit-appearance: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 button:focus-visible {
@@ -425,6 +438,8 @@ button:disabled {
     overscroll-behavior: contain;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    overflow-y: auto;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 
   .modal-panel {
