@@ -12,9 +12,21 @@ const approvalCoverageLabel: Record<ApprovalCoverage, string> = {
 };
 
 const approvalCoverageActionLabel: Record<ApprovalCoverage, string> = {
-  mandatory: 'אשר חובה',
-  payable: 'אשר בתשלום',
-  both: 'אשר שניהם',
+  mandatory: 'אישור',
+  payable: 'אישור בתשלום',
+  both: 'אשר הכל',
+};
+
+const approvalCoverageSecondaryActionLabel: Record<ApprovalCoverage, string> = {
+  mandatory: 'אישור',
+  payable: 'אישור בתשלום',
+  both: 'אשר רק חובה',
+};
+
+const approvalCoverageRejectLabel: Record<ApprovalCoverage, string> = {
+  mandatory: 'דחייה',
+  payable: 'דחייה',
+  both: 'דחיית הכל',
 };
 
 const approvalCoverageNote: Record<ApprovalCoverage, string> = {
@@ -184,52 +196,52 @@ const ManagerApproval = () => {
                     : 'payable';
 
                 return (
-                  <div key={report.id} className="content-card p-4">
-                    <div className="mb-3 flex items-start justify-between gap-4">
+                  <div key={report.id} className="content-card p-2">
+                    <div className="mb-1 flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-base font-semibold">{report.youthName}</div>
-                        <div className="page-subtitle text-sm">
+                        <div className="text-sm font-semibold">{report.youthName}</div>
+                        <div className="page-subtitle text-xs">
                           {report.date} | {report.startTime}-{report.endTime}
                         </div>
                       </div>
                       <div className="chip chip-warm">{report.totalHours.toFixed(1)}</div>
                     </div>
 
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      <div className="chip">{approvalCoverageLabel[coverageLabel]}</div>
-                      <div className="chip chip-info">שעות חובה: {preview.mandatoryHours.toFixed(1)}</div>
-                      <div className="chip chip-info">שעות בתשלום: {preview.payableHours.toFixed(1)}</div>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      <div className="chip text-[11px]">{approvalCoverageLabel[coverageLabel]}</div>
+                      <div className="chip chip-info text-[11px]">חובה: {preview.mandatoryHours.toFixed(1)}</div>
+                      <div className="chip chip-info text-[11px]">בתשלום: {preview.payableHours.toFixed(1)}</div>
                     </div>
 
-                    {report.details ? <div className="mb-4 rounded-3xl bg-slate-50/90 p-3 text-sm">{report.details}</div> : null}
+                    {report.details ? <div className="mb-2 rounded-xl bg-slate-50/90 p-2 text-sm">{report.details}</div> : null}
                     {report.reviewNote ? (
-                      <div className="mb-4 rounded-3xl bg-amber-50/90 p-3 text-sm text-amber-800">
+                      <div className="mb-2 rounded-xl bg-amber-50/90 p-2 text-sm text-amber-800">
                         <div>{report.reviewNote}</div>
                       </div>
                     ) : null}
 
                     {isBoth ? (
                       <div className="space-y-2">
-                        <div className="text-xs font-semibold text-slate-600 mb-2">בחר אפשרות אישור:</div>
-                        <button 
-                          type="button" 
-                          onClick={() => void handleApprove(report.id, 'both')} 
-                          className="btn-primary w-full justify-center py-2.5"
+                        <div className="mb-2 text-xs font-semibold text-slate-600">בחר אפשרות אישור:</div>
+                        <button
+                          type="button"
+                          onClick={() => void handleApprove(report.id, 'both')}
+                          className="btn-primary w-full justify-center py-2"
                         >
                           <FiCheck size={18} />
-                          <span>אשר הכל (חובה + בתשלום)</span>
+                          <span>{approvalCoverageActionLabel.both}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => void handleApprove(report.id, 'mandatory')}
-                          className="btn-olive w-full justify-center py-2.5"
+                          className="btn-olive w-full justify-center py-2"
                         >
                           <FiCheck size={18} />
-                          <span>אשר חובה בלבד</span>
+                          <span>{approvalCoverageSecondaryActionLabel.both}</span>
                         </button>
-                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger w-full justify-center py-2.5">
+                        <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger w-full justify-center py-2">
                           <FiX size={18} />
-                          <span>דחייה</span>
+                          <span>{approvalCoverageRejectLabel.both}</span>
                         </button>
                       </div>
                     ) : (
@@ -240,7 +252,7 @@ const ManagerApproval = () => {
                         </button>
                         <button type="button" onClick={() => setSelectedReport(report)} className="btn-danger">
                           <FiX size={16} />
-                          דחייה
+                          {approvalCoverageRejectLabel[coverageLabel]}
                         </button>
                       </div>
                     )}

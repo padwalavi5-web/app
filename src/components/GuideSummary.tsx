@@ -339,12 +339,12 @@ const GuideSummary = () => {
                     key={row.youth.id}
                     type="button"
                     onClick={() => openYouthDetails(row.youth)}
-                    className="plain-card w-full p-4 text-right transition duration-200 hover:-translate-y-0.5"
+                    className="plain-card w-full rounded-[10px] p-1.5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold">{row.youth.name}</span>
+                    <div className="flex flex-row items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-sm font-semibold">{row.youth.name}</span>
                           {isBirthdayToday(row.youth.birthDate) ? (
                             <span className="text-lg" title="יום הולדת היום!" aria-label="יום הולדת היום!">
                               🎂
@@ -358,20 +358,20 @@ const GuideSummary = () => {
                             />
                           ) : null}
                         </div>
-                        <div className="page-subtitle mt-1 text-sm">תקציב {row.youth.personalBudgetNumber}</div>
+                        <div className="page-subtitle mt-1 text-xs">תקציב {row.youth.personalBudgetNumber}</div>
                       </div>
 
-                      <div className="grid w-full gap-2 text-sm sm:w-auto sm:min-w-[260px] sm:grid-cols-3">
-                        <div className="rounded-2xl bg-slate-50/90 px-3 py-2">
-                          <div className="page-subtitle text-[11px]">החודש</div>
+                      <div className="flex shrink-0 gap-1 text-xs">
+                        <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
+                          <div className="page-subtitle text-[10px]">החודש</div>
                           <div className="font-semibold">{row.summary.currentMonthHours.toFixed(1)}</div>
                         </div>
-                        <div className="rounded-2xl bg-slate-50/90 px-3 py-2">
-                          <div className="page-subtitle text-[11px]">התנדבות</div>
+                        <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
+                          <div className="page-subtitle text-[10px]">התנדבות</div>
                           <div className="font-semibold">{row.summary.volunteerCompletedHours.toFixed(1)}</div>
                         </div>
-                        <div className="rounded-2xl bg-emerald-50/90 px-3 py-2">
-                          <div className="page-subtitle text-[11px]">לתשלום</div>
+                        <div className="rounded-lg bg-emerald-50/90 px-2 py-1.5 text-center">
+                          <div className="page-subtitle text-[10px]">לתשלום</div>
                           <div className="font-semibold text-emerald-700">₪{row.summary.payablePendingAmount.toFixed(0)}</div>
                         </div>
                       </div>
