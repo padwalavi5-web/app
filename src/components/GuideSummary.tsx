@@ -107,12 +107,12 @@ const GuideSummary = () => {
     
     // Build main summary section
     const mainSummary = [
-      ['שם', 'מספר תקציב', 'שעות החודש', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
+      ['שם', 'מספר תקציב', 'שעות מאז האיפוס', 'שעות לתשלום', 'סכום לתשלום'].map(escapeValue).join(','),
       ...summaryRows.map((row) =>
         [
           row.youth.name,
           row.youth.personalBudgetNumber,
-          row.summary.currentMonthHours.toFixed(1),
+          row.summary.cycleApprovedHours.toFixed(1),
           row.summary.payablePendingHours.toFixed(1),
           row.summary.payablePendingAmount.toFixed(2),
         ].map(escapeValue).join(','),

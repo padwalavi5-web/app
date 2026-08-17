@@ -3,6 +3,8 @@ import { calculateAge } from './data';
 
 export const MANDATORY_HOURS_LIMIT = 90;
 export const VOLUNTEER_HOURS_LIMIT = 20;
+export const WORK_CYCLE_RESET_MONTH = 5;
+export const WORK_CYCLE_RESET_DAY = 20;
 
 export type ApprovalCoverage = 'mandatory' | 'payable' | 'both';
 
@@ -58,13 +60,16 @@ const parseLocalDate = (value: string) => {
 export const isVolunteerReport = (report: Report) =>
   report.reportType === 'volunteer' || report.branch === VOLUNTEER_BRANCH_NAME;
 
-// Return the beginning of the current work cycle, which always starts on July 1st.
+// Return the beginning of the current work cycle, which resets on June 20th.
 export const getWorkCycleStart = (referenceDate = new Date()) => {
-  const year = referenceDate.getMonth() >= 6 ? referenceDate.getFullYear() : referenceDate.getFullYear() - 1;
-  return new Date(year, 6, 1);
+  const hasPassedResetDate =
+    referenceDate.getMonth() > WORK_CYCLE_RESET_MONTH ||
+    (referenceDate.getMonth() === WORK_CYCLE_RESET_MONTH && referenceDate.getDate() >= WORK_CYCLE_RESET_DAY);
+  const year = hasPassedResetDate ? referenceDate.getFullYear() : referenceDate.getFullYear() - 1;
+  return new Date(year, WORK_CYCLE_RESET_MONTH, WORK_CYCLE_RESET_DAY);
 };
 
-// Check whether a report belongs to the current July-to-June work cycle.
+// Check whether a report belongs to the current June-20-to-June-19 work cycle.
 export const isReportInCurrentCycle = (reportDate: string, referenceDate = new Date()) =>
   parseLocalDate(reportDate).getTime() >= getWorkCycleStart(referenceDate).getTime();
 
@@ -138,7 +143,7 @@ const getCycleVolunteerReports = (youthId: string, reports: Report[], referenceD
     ),
   );
 
-// Sum approved volunteer hours inside the current July-to-June work cycle.
+// Sum approved volunteer hours inside the current June-20-to-June-19 work cycle.
 export const getCycleVolunteerHours = (youthId: string, reports: Report[], referenceDate = new Date()) =>
   getCycleVolunteerReports(youthId, reports, referenceDate).reduce((total, report) => total + report.totalHours, 0);
 
@@ -273,7 +278,7 @@ export const buildPayableBranchTotals = (
   });
 };
 
-// Build the guide/youth summary while keeping July 1st as the only reset point for mandatory hours.
+// Build the guide/youth summary while keeping the June 20th reset point consistent everywhere.
 export const buildYouthWorkSummary = (
   youth: Youth,
   reports: Report[],
